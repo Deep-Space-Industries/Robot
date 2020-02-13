@@ -32,7 +32,7 @@ class Wall:
     self.color = color
 
   def draw(self):
-    pygame.draw.line(screen, self.color, self.start_point, self.end_point, 3)
+      pygame.draw.line(screen, self.color, self.start_point, self.end_point, 3)
 
 class Robot:
     def __init__(self, x, y, left_velocity, right_velocity,radius):
@@ -40,13 +40,14 @@ class Robot:
         self.y = y
         self.radius=radius
 
+        self.history = []
         self.left_velocity = left_velocity
         self.right_velocity = right_velocity
         self.velocity = (self.left_velocity + self.right_velocity) / 2
         self.angle = 0
         self.theta=0
         self.omega=(self.right_velocity-self.left_velocity)/(2*self.radius)
-        self.icc_radius = self.radius * (self.left_velocity + self.right_velocity) / (self.right_velocity - self.left_velocity)
+        self.icc_radius = self.radius * (self.left_velocity + self.right_velocity) / (self.right_velocity - self.left_velocity + 0.00001)
         self.icc_centre_x=self.x-self.icc_radius*sin(self.theta)
         self.icc_centre_y=self.y+self.icc_radius*cos(self.theta)
 
@@ -61,11 +62,16 @@ class Robot:
         colorr =  int(np.abs(self.right_velocity) * 10 / 255) & 255
         colorb = int(np.abs(self.left_velocity) * 10 / 255) & 255
         pygame.draw.circle(screen, GREEN, [self.x,self.y], self.radius)
+        self.history.append([self.x, self.y])
+        print([self.x, self.y])
+        if len(self.history) > 5:
+            pygame.draw.lines(screen, PURPLE, False, self.history)
         # gfxdraw.aacircle(screen, self.x, self.y, self.radius, GREEN)
         # gfxdraw.filled_circle(screen, self.x, self.y, self.radius, GREEN)
 
     def draw_icc(self):
         pygame.draw.circle(screen, PURPLE, [int(self.icc_centre_x),int(self.icc_centre_y)],2)
+        print([int(self.icc_centre_x), int(self.icc_centre_y)])
 
     def draw_direction(self):
         pygame.draw.line(screen, RED, (self.x, self.y), \
@@ -132,21 +138,9 @@ class Robot:
             self.y = min_pos_y + self.radius
 
     def move(self):
-        # self.get_velocity()
-        #         # v = self.velocity
-        # self.theta = np.arccos(np.dot(self.forward, xAxes) / (
-        #         np.linalg.norm(self.forward) * np.linalg.norm(xAxes)))
-        # self.ICC = np.array([self.pos[0] - self.R * np.sin(self.theta),
-        #                      self.pos[1] + self.R * np.cos(self.theta)])
-        # self.omega = (self.right_velocity - self.left_velocity) / (2 * self.radius)
-        # self.icc_radius = self.radius * (self.left_velocity + self.right_velocity) / (
-        #         self.right_velocity - self.left_velocity)
-        # self.icc_centre_x = self.x - self.icc_radius * sin(self.theta)
-        # self.icc_centre_y = self.y + self.icc_radius * cos(self.theta)
         if (self.left_velocity == self.right_velocity):
             self.x += int(self.left_velocity * cos(self.theta))
             self.y += int(self.right_velocity * sin(self.theta))
-            print([self.x, self.y])
         else:
             p= np.dot(np.array([[np.cos(self.omega), -np.sin(self.omega), 0],
                                 [np.sin(self.omega), np.cos(self.omega), 0],
@@ -156,10 +150,10 @@ class Robot:
                                     [self.y - self.icc_centre_y],
                                     [self.theta]]))
             # np.array([self.x, self.y, self.theta])
-            print(p)
-            self.x = int(p[0][0]+self.icc_centre_x)
-            self.y = int(p[1][0]+self.icc_centre_y)
-            self.theta= int(p[2][0]+self.omega)
+            # print(p)
+            self.x = int(np.round(p[0]+self.icc_centre_x))
+            self.y = int(np.round(p[1]+self.icc_centre_y))
+            self.theta= int(p[2]+self.omega)
         self.check_boundary()
         # rect = pygame.rect.Rect((self.x, self.y, self.width, self.height))
         # pygame.draw.rect(screen, RED, rect)
@@ -172,7 +166,8 @@ class Robot:
         text = font.render(message, True ,(0, 128, 0))
         return text
 
-block = Robot(500, 400, 3, 2, 30)
+block = Robot(500, 400, 4, 5, 30)
+
 walls = []
 wall=Wall((100,200),(200,900), WHITE)
 east_border = Wall((width - 5, 0), (width - 5, height - 5), WHITE)
@@ -213,16 +208,18 @@ def gameloop():
                   block.update_icc()
               elif event.key == pygame.K_t:
                   block.speedup_both() # increment both wheel speed
+                  block.update_icc()
               elif event.key == pygame.K_g:
+                  block.update_icc()
                   block.slowdown_both() # decrement both wheel speed
               elif event.key == pygame.K_ESCAPE:
                 loopExit = False
 
-      block.move()
       screen.fill(BLACK)
       for w in walls:
           w.draw()
-      block.draw()
+      # block.draw()
+      block.move()
       block.draw_direction()
       block.draw_icc()
       print(block.left_velocity, block.right_velocity)
@@ -231,8 +228,8 @@ def gameloop():
       # text = block.message_display()
       # screen.blit(text, (320, 240))
 
-
+      clock.tick(60)
       pygame.display.update()
-      clock.tick(120)
+
 
 gameloop()
