@@ -75,8 +75,8 @@ class Robot:
 
     def draw_direction(self):
         pygame.draw.line(screen, RED, (self.x, self.y), \
-                         (self.x + self.radius * cos(self.angle),
-                         self.y + self.radius * sin(self.angle)), 2)
+                         (self.x + self.radius * cos(self.theta),
+                         self.y + self.radius * sin(self.theta)), 2)
 
     def speedup_left(self):
         self.left_velocity += self.increase_factor
@@ -153,10 +153,13 @@ class Robot:
             # print(p)
             self.x = int(np.round(p[0]+self.icc_centre_x))
             self.y = int(np.round(p[1]+self.icc_centre_y))
-            self.theta= int(p[2]+self.omega)
+            # self.theta = p[2] + self.omega
+            self.theta += self.omega
         self.check_boundary()
         # rect = pygame.rect.Rect((self.x, self.y, self.width, self.height))
         # pygame.draw.rect(screen, RED, rect)
+        print(f"theta: {self.theta}")
+        print(f"omega: {self.omega}")
         self.draw()
 
     def message_display(self):
@@ -166,7 +169,7 @@ class Robot:
         text = font.render(message, True ,(0, 128, 0))
         return text
 
-block = Robot(500, 400, 4, 5, 30)
+block = Robot(500, 600, 5, 4, 30)
 
 walls = []
 wall=Wall((100,200),(200,900), WHITE)
