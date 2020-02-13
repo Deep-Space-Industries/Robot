@@ -44,13 +44,11 @@ class Robot:
         self.left_velocity = left_velocity
         self.right_velocity = right_velocity
         self.velocity = (self.left_velocity + self.right_velocity) / 2
-        self.angle = 0
         self.theta=0
-        self.omega=(self.right_velocity-self.left_velocity)/(2*self.radius)
-        self.icc_radius = self.radius * (self.left_velocity + self.right_velocity) / (self.right_velocity - self.left_velocity + 0.00001)
+        self.omega=((self.right_velocity-self.left_velocity))/(2*self.radius)
+        self.icc_radius = self.radius * (self.left_velocity + self.right_velocity) / (self.right_velocity-self.left_velocity + 0.00001)
         self.icc_centre_x=self.x-self.icc_radius*sin(self.theta)
         self.icc_centre_y=self.y+self.icc_radius*cos(self.theta)
-
 
         self.decrease_factor = 1
         self.increase_factor = 1
@@ -59,8 +57,6 @@ class Robot:
         # self.rect = pygame.rect.Rect((self.x, self.y, self.width, self.height))
         # pygame.draw.rect(screen, GREEN, self.rect)
         # self.rect = pygame.circ.Rect((self.x, self.y, self.width, self.height))
-        colorr =  int(np.abs(self.right_velocity) * 10 / 255) & 255
-        colorb = int(np.abs(self.left_velocity) * 10 / 255) & 255
         pygame.draw.circle(screen, GREEN, [self.x,self.y], self.radius)
         self.history.append([self.x, self.y])
         print([self.x, self.y])
@@ -70,6 +66,8 @@ class Robot:
         # gfxdraw.filled_circle(screen, self.x, self.y, self.radius, GREEN)
 
     def draw_icc(self):
+        if (self.left_velocity == self.right_velocity):
+            return
         pygame.draw.circle(screen, PURPLE, [int(self.icc_centre_x),int(self.icc_centre_y)],2)
         print([int(self.icc_centre_x), int(self.icc_centre_y)])
 
@@ -105,24 +103,12 @@ class Robot:
         self.velocity = (self.left_velocity + self.right_velocity) / 2
         return self.velocity
 
-    def distance_from_ICC(self):
-        return self.radius * ( (self.right_velocity + self.left_velocity) / (self.right_velocity - self.left_velocity) )
-
     def update_icc(self):
-        self.omega = (self.right_velocity - self.left_velocity) / (2 * self.radius)
+        self.omega = np.abs(self.right_velocity - self.left_velocity) / (2 * self.radius)
         self.icc_radius = self.radius * (self.left_velocity + self.right_velocity) / (
                     self.right_velocity - self.left_velocity + 0.0001)
         self.icc_centre_x = self.x - self.icc_radius * sin(self.theta)
         self.icc_centre_y = self.y + self.icc_radius * cos(self.theta)
-
-    # def set_omega(self):
-    #     self.omega = (self.right_velocity - self.left_velocity) / (2 * self.radius)
-
-    def rotate(self, clockwise = True):
-        if clockwise:
-            self.angle += PI / 20
-        else:
-            self.angle -= PI / 20
 
     def check_boundary(self):
         max_pos_x = width - 5
@@ -151,11 +137,11 @@ class Robot:
                                     [self.theta]]))
             # np.array([self.x, self.y, self.theta])
             # print(p)
-            self.x = int(np.round(p[0]+self.icc_centre_x))
-            self.y = int(np.round(p[1]+self.icc_centre_y))
+            self.x = int(np.round(p[0] + self.icc_centre_x))
+            self.y = int(np.round(p[1] + self.icc_centre_y))
             # self.theta = p[2] + self.omega
             self.theta += self.omega
-        self.check_boundary()
+        # self.check_boundary()
         # rect = pygame.rect.Rect((self.x, self.y, self.width, self.height))
         # pygame.draw.rect(screen, RED, rect)
         print(f"theta: {self.theta}")
@@ -169,7 +155,7 @@ class Robot:
         text = font.render(message, True ,(0, 128, 0))
         return text
 
-block = Robot(500, 600, 5, 4, 30)
+block = Robot(500, 600, 4, 4, 30)
 
 walls = []
 wall=Wall((100,200),(200,900), WHITE)
@@ -195,16 +181,16 @@ def gameloop():
               if event.key == pygame.K_UP:
                   t = t+1
               elif event.key == pygame.K_w:
-                  block.speedup_right()
-                  block.update_icc()
-              elif event.key == pygame.K_s:
-                  block.slowdown_right()
-                  block.update_icc()
-              elif event.key == pygame.K_o:
                   block.speedup_left()
                   block.update_icc()
+              elif event.key == pygame.K_s:
+                  block.slowdown_left()
+                  block.update_icc()
+              elif event.key == pygame.K_o:
+                  block.speedup_right()
+                  block.update_icc()
               elif event.key == pygame.K_l:
-                  block.slowdown_left() # decrement of left wheel
+                  block.slowdown_right() # decrement of left wheel
                   block.update_icc()
               elif event.key == pygame.K_x:
                   block.stop_both() # zero both wheel speed
