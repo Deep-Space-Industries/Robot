@@ -18,6 +18,9 @@ RED = (255, 0, 0)
 PURPLE = (255, 0, 255)
 BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
+GOLD = (255,215,0)
+SILVER = (192, 192, 192)
+LIGHTBLUE = (135,206,250)
 
 scaler = 10
 PI = np.pi
@@ -97,13 +100,13 @@ class Robot:
     def draw_direction(self):
         rot = (self.x + self.radius * cos(self.theta), self.y + self.radius * sin(self.theta))
         # my_group.update(self.x, self.y, rot)
-        pygame.draw.line(screen, RED, (int(round(self.x)), int(round(self.y))),
+        pygame.draw.line(screen, SILVER, (int(round(self.x)), int(round(self.y))),
                          (int(round(self.x + self.radius * cos(self.theta))),
                           int(round(self.y + self.radius * sin(self.theta)))), 3 )
-        pygame.draw.line(screen, RED, (self.x, self.y), \
+        pygame.draw.line(screen, SILVER, (self.x, self.y), \
                          (self.x + self.radius * cos(self.theta - PI/6),
                           self.y + self.radius * sin(self.theta - PI/6)), 3 )
-        pygame.draw.line(screen, RED, (self.x, self.y), \
+        pygame.draw.line(screen, SILVER, (self.x, self.y), \
                          (self.x + self.radius * cos(self.theta + PI / 6),
                           self.y + self.radius * sin(self.theta + PI / 6)), 3 )
 
@@ -138,60 +141,87 @@ class Robot:
         self.icc_centre_x = self.x - self.icc_radius * sin(self.theta)
         self.icc_centre_y = self.y + self.icc_radius * cos(self.theta)
 
-    def check_boundary(self):
-        max_pos_x = width - 5
-        max_pos_y = height - 5
-        min_pos_x = min_pos_y = 5
-        if (self.x + self.radius >= max_pos_x):
-            self.x = max_pos_x - self.radius
-        if (self.x - self.radius <= min_pos_x):
-            self.x = min_pos_x + self.radius
-        if (self.y + self.radius >= max_pos_y):
-            self.y = max_pos_y - self.radius
-        if (self.y - self.radius <= min_pos_y):
-            self.y = min_pos_y + self.radius
-        # self.theta += self.omega
-
     def move(self):
+        prev_x = self.x
+        prev_y = self.y
+        prev_theta = self.theta
         self.collision = False
-        self.collision_detection()
-        if self.collision == True:
-            theta1 = self.collided_wall.angle
-            if cos(theta1 - self.theta) <= 0.0:
-                self.x += self.velocity * - cos(theta1)
-                self.y += self.velocity * - sin(theta1)
-            if cos(theta1 - self.theta) > 0.0:
-                self.x += self.velocity * cos(theta1)
-                self.y += self.velocity * sin(theta1)
+        self.collided_wall = None
+        self.collision_num = 0
+        self.blit_collision_info()
+        if (self.left_velocity == self.right_velocity):
             self.theta += self.omega
-            # self.update_icc()
+            self.x += self.velocity * cos(self.theta)
+            self.y += self.velocity * sin(self.theta)
         else:
-            if (self.left_velocity == self.right_velocity):
-                # self.theta -= self.omega
-                self.x += self.left_velocity * cos(self.theta)
-                self.y += self.right_velocity * sin(self.theta)
+            p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
+                                 [sin(self.omega), cos(self.omega), 0],
+                                 [0, 0, 1]]), \
+                       np.array(
+                           [self.icc_radius * sin(self.theta),  # self.x - self.icc_centre_x,
+                            -self.icc_radius * cos(self.theta),  # self.y - self.icc_centre_y,
+                            self.theta]))
+            self.x = p[0] + self.icc_centre_x
+            self.y = p[1] + self.icc_centre_y
+            self.theta = p[2] + self.omega
+            self.t += 1
+
+        self.collision_detection()
+        if self.collision:
+            self.x = prev_x
+            self.y = prev_y
+            # self.theta = prev_theta
+            if self.collision_num > 2:
+                self.theta += self.omega
+                self.update_icc()
+                self.draw()
+                return
             else:
-                p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
-                                     [sin(self.omega), cos(self.omega), 0],
-                                     [0, 0, 1]]), \
-                           np.array(
-                               [
-                                   self.icc_radius * sin(self.theta),  # self.x - self.icc_centre_x,
-                                   -self.icc_radius * cos(self.theta),  # self.y - self.icc_centre_y,
-                                   self.theta]))
-                self.x = p[0] + self.icc_centre_x
-                self.y = p[1] + self.icc_centre_y
-                # print(f"ps : {p}")
-                self.theta = p[2] + self.omega
-                self.t += 1
-            # self.check_boundary()
-        # rect = pygame.rect.Rect((self.x, self.y, self.width, self.height))
-        # pygame.draw.rect(screen, RED, rect)
-        # print(f"time: {self.t}")
-        # print(f"theta: {self.theta}")
-        # print(f"omega: {self.omega}")
-        # print(f"icc radius: {self.icc_radius}")
+                self.slide()
+                return
         self.draw()
+
+    def slide(self):
+        theta1 = self.collided_wall.angle
+        direction = cos(theta1 - self.theta)
+        self.theta += self.omega
+        if direction <= -0.99 or direction > 0.99:
+            self.collision = False
+            p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
+                                 [sin(self.omega), cos(self.omega), 0],
+                                 [0, 0, 1]]), \
+                       np.array(
+                           [self.icc_radius * sin(self.theta),  # self.x - self.icc_centre_x,
+                            -self.icc_radius * cos(self.theta),  # self.y - self.icc_centre_y,
+                            self.theta]))
+            self.x = p[0] + self.icc_centre_x
+            self.y = p[1] + self.icc_centre_y
+            self.theta = p[2] + self.omega
+            self.t += 1
+            self.draw()
+            return
+        if direction <= 0.0:
+            self.x += self.velocity * - cos(theta1)
+            self.y += self.velocity * - sin(theta1)
+        if direction > 0.0:
+            self.x += self.velocity * cos(theta1)
+            self.y += self.velocity * sin(theta1)
+        self.theta += self.omega
+
+        self.update_icc()
+        self.draw()
+        # self.update_icc()
+
+    def blit_collision_info(self):
+        direction = None
+        if self.collided_wall != None:
+            theta1 = self.collided_wall.angle
+            direction = cos(theta1 - self.theta)
+        font = pygame.font.SysFont('FUTURA', 16)
+        text = font.render(f"{self.collision}, {self.collision_num}, {direction}", True, BLACK, SILVER)
+        textRect = text.get_rect()
+        textRect.center = (self.x, self.y - 50)
+        screen.blit(text, textRect)
 
     def message_display(self):
         messages = [f"l velocity: {self.left_velocity}", \
@@ -202,15 +232,15 @@ class Robot:
 
     def collision_detection(self):
         self.color = GREEN
-        count = 0
+        self.collision_num = 0
         for wall in walls:
-            wall.color = RED
+            wall.color = GOLD
             perpendicular_distance = wall.get_perpendicular_distance(self.x, self.y)
             wall.dist = perpendicular_distance
             if (wall.hit == True):
                 self.collision = True
                 self.collided_wall = wall
-
+                self.collision_num += 1
 
 
 class Wall:
@@ -343,7 +373,7 @@ def main():
 
             screen.fill(BLACK)
             text = font.render(f'L: {block.left_velocity}; R: {block.right_velocity}', True, GREEN, BLUE)
-            text1 = font.render(f"{block.collision}. Wall1: {np.rad2deg(walls[0].angle)}; Wall2: {np.rad2deg(walls[1].angle)}", True, GREEN, BLUE)
+            text1 = font.render(f"{block.collision}. {()}", True, GREEN, BLUE)
             textRect = text.get_rect()
             textRect.center = (800 , 300 )
             textRect1 = text1.get_rect()
@@ -383,23 +413,23 @@ if __name__ == '__main__':
     west_border = Wall((5 , 5 ), (5 , height - 5 ), GREY)
     south_border = Wall((5 , height - 5 ), (width - 5 , height - 5 ), GREY)
     north_border = Wall((5 , 5 ), (width - 5 , 5 ), GREY)
-    wall1 = Wall((250, 250), (750, 250), RED)
-    wall2 = Wall((750, 250), (750, 750), RED)
-    wall3 = Wall((750, 750), (250, 750), RED)
-    wall4 = Wall((250, 750), (250, 250), RED)
-    walls.append(wall1)
-    walls.append(wall2)
-    walls.append(wall3)
-    walls.append(wall4)
-    # walls.append(Wall((100, 200), (400, 300), RED))
-    # walls.append(Wall((600, 500), (800, 900), RED))
-    # walls.append((Wall((300, 500) , (300, 750), RED)))
-    # walls.append(Wall((600, 400), (600, 805), RED))
+    # wall1 = Wall((250, 250), (750, 250), RED)
+    # wall2 = Wall((750, 250), (750, 750), RED)
+    # wall3 = Wall((750, 750), (250, 750), RED)
+    # wall4 = Wall((250, 750), (250, 250), RED)
+    # walls.append(wall1)
+    # walls.append(wall2)
+    # walls.append(wall3)
+    # walls.append(wall4)
+    walls.append(Wall((100, 200), (400, 300), GOLD))
+    walls.append(Wall((600, 500), (800, 900), GOLD))
+    walls.append((Wall((300, 500) , (300, 750), GOLD)))
+    walls.append(Wall((600, 400), (600, 805), GOLD))
     walls.append(east_border)
     walls.append(west_border)
     walls.append(south_border)
     walls.append(north_border)
-    block = Robot(820, 890 , 2 , 3 , 20 , walls)
+    block = Robot(520, 590 , 2 , 3 , 20 , walls)
     main()
 
 
