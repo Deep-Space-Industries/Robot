@@ -157,21 +157,19 @@ class Robot:
         self.collision_detection()
         if self.collision == True:
             theta1 = self.collided_wall.angle
-            if sin(theta1) * sin(self.theta) <= 0.0:
+            if cos(theta1 - self.theta) <= 0.0:
                 self.x += self.velocity * - cos(theta1)
                 self.y += self.velocity * - sin(theta1)
-            if sin(theta1) * sin(self.theta) > 0.0:
+            if cos(theta1 - self.theta) > 0.0:
                 self.x += self.velocity * cos(theta1)
                 self.y += self.velocity * sin(theta1)
-            else:
-                pass
-            self.update_icc()
+            self.theta += self.omega
+            # self.update_icc()
         else:
             if (self.left_velocity == self.right_velocity):
                 # self.theta -= self.omega
                 self.x += self.left_velocity * cos(self.theta)
                 self.y += self.right_velocity * sin(self.theta)
-
             else:
                 p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
                                      [sin(self.omega), cos(self.omega), 0],
@@ -204,19 +202,14 @@ class Robot:
 
     def collision_detection(self):
         self.color = GREEN
-        for wall in walls[:4]:
+        count = 0
+        for wall in walls:
             wall.color = RED
             perpendicular_distance = wall.get_perpendicular_distance(self.x, self.y)
             wall.dist = perpendicular_distance
-            if ((wall.end_point[0] <= self.x <= wall.start_point[0] or wall.start_point[0] <= self.x <= wall.end_point[0]) and \
-                    (wall.end_point[1] <= self.y <= wall.start_point[1] or wall.start_point[1] <= self.y <= wall.end_point[1]) and \
-                    wall.dist <= self.radius):
-                self.color = (255, 255, 128)
-                wall.hit = True
-                self.collided_wall = wall
-                self.collided_wall.color = (128, 255, 255)
+            if (wall.hit == True):
                 self.collision = True
-            print(perpendicular_distance)
+                self.collided_wall = wall
 
 
 
@@ -235,15 +228,40 @@ class Wall:
         pygame.draw.line(screen, self.color, self.start_point, self.end_point, 3)
 
     def get_perpendicular_distance(self, x, y):
+        self.hit = False
         if (self.end_point[0] != self.start_point[0]):
             self.m = (self.end_point[1] - self.start_point[1]) / (self.end_point[0] - self.start_point[0])
             self.c = self.start_point[1] - (self.start_point[0]) * self.m
             # print(abs(self.m*x+self.c-y)/(np.sqrt(self.m*self.m + 1)))
-            return abs(self.m * x + self.c - y) / (np.sqrt(self.m * self.m + 1))
+            X = (x + self.m * y - self.m * self.c) / (self.m ** 2 + 1)
+            Y = self.m * ( (x + self.m * y - self.m * self.c) / (self.m ** 2 + 1)) + self.c
+            # pygame.draw.circle(screen, BLACK, (int(round((X))), int(round(Y))), 4)
 
+            if (
+                (min(self.end_point[0], self.start_point[0]) <= int(round(X)) <= max(self.start_point[0], self.end_point[0])) and \
+                (min(self.end_point[1], self.start_point[1]) <= int(round(Y)) <= max(self.start_point[1], self.end_point[1])) and \
+                (np.sqrt((X - x) ** 2 + (Y - y) ** 2) < 20)
+            ):
+                self.hit = True
+                self.color = BLACK
+                self.nearest_point = [X, Y]
+            return abs(self.m * x + self.c - y) / (np.sqrt(self.m * self.m + 1))
         else:
             # print(abs(x-self.start_point[0]))
-            return abs(x - self.start_point[0])
+            X = self.start_point[0]
+            Y = y
+            self.nearest_point = [X, Y]
+            # pygame.draw.circle(screen, BLACK, (int(round((X))), int(round(Y))), 4)
+            if (
+                (min(self.end_point[0], self.start_point[0]) <= int(round(X)) <= max(self.start_point[0], self.end_point[0])) and \
+                (min(self.end_point[1], self.start_point[1]) <= int(round(Y)) <= max(self.start_point[1], self.end_point[1])) and \
+                (np.sqrt((X - x) ** 2 + (Y - y) ** 2) < 20)
+            ):
+                self.hit = True
+                self.color = BLACK
+                self.nearest_point = [X, Y]
+            return abs(y - self.start_point[1])
+
 
     def get_angle(self):
 
@@ -365,22 +383,23 @@ if __name__ == '__main__':
     west_border = Wall((5 , 5 ), (5 , height - 5 ), GREY)
     south_border = Wall((5 , height - 5 ), (width - 5 , height - 5 ), GREY)
     north_border = Wall((5 , 5 ), (width - 5 , 5 ), GREY)
-    # wall1 = Wall((250, 250), (750, 250), RED)
-    # wall2 = Wall((750, 250), (750, 750), RED)
-    # wall3 = Wall((750, 750), (250, 750), RED)
-    # wall4 = Wall((250, 750), (250, 250), RED)
-    # walls.append(wall1)
-    # walls.append(wall2)
-    # walls.append(wall3)
-    # walls.append(wall4)
-    walls.append(Wall((100, 200), (200, 300), RED))
-    walls.append(Wall((600, 500), (800, 900), RED))
-    walls.append((Wall((300, 600) , (500, 650), RED)))
+    wall1 = Wall((250, 250), (750, 250), RED)
+    wall2 = Wall((750, 250), (750, 750), RED)
+    wall3 = Wall((750, 750), (250, 750), RED)
+    wall4 = Wall((250, 750), (250, 250), RED)
+    walls.append(wall1)
+    walls.append(wall2)
+    walls.append(wall3)
+    walls.append(wall4)
+    # walls.append(Wall((100, 200), (400, 300), RED))
+    # walls.append(Wall((600, 500), (800, 900), RED))
+    # walls.append((Wall((300, 500) , (300, 750), RED)))
+    # walls.append(Wall((600, 400), (600, 805), RED))
     walls.append(east_border)
     walls.append(west_border)
     walls.append(south_border)
     walls.append(north_border)
-    block = Robot(800 , 800 , 2 , 3 , 20 , walls)
+    block = Robot(820, 890 , 2 , 3 , 20 , walls)
     main()
 
 
