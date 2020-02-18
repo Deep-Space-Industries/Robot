@@ -166,22 +166,57 @@ class Robot:
             self.theta = p[2] + self.omega
             self.t += 1
 
-        self.collision_detection()
-        if self.collision:
+        self.next_second()
+        self.to_collide = False
+        self.collision_detection(self.next_x, self.next_y, True)
+        if (self.to_collide):
+            self.color = GOLD
             self.x = prev_x
             self.y = prev_y
-            # self.theta = prev_theta
-            if self.collision_num > 2:
-                self.theta += self.omega
-                self.update_icc()
-                self.draw()
-                return
-            else:
-                self.slide()
-                return
+            self.theta = prev_theta
+            self.slide()
+            return
+
+        # self.collision_detection()
+        # if self.collision:
+        #     self.x = prev_x
+        #     self.y = prev_y
+        #     # self.theta = prev_theta
+        #     if self.collision_num > 2:
+        #         self.theta += self.omega
+        #         self.update_icc()
+        #         self.draw()
+        #         return
+        #     else:
+        #         self.slide()
+        #         return
         self.draw()
 
+    def next_second(self):
+        self.next_x = None
+        self.next_y = None
+        self.next_theta = None
+        if (self.left_velocity == self.right_velocity):
+            self.next_x = self.x + self.velocity * cos(self.theta)
+            self.next_y = self.y +  self.velocity * sin(self.theta)
+            self.next_theta = self.theta + self.omega
+        else:
+            p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
+                                 [sin(self.omega), cos(self.omega), 0],
+                                 [0, 0, 1]]), \
+                       np.array(
+                           [self.icc_radius * sin(self.theta),  # self.x - self.icc_centre_x,
+                            -self.icc_radius * cos(self.theta),  # self.y - self.icc_centre_y,
+                            self.theta]))
+            self.next_x = p[0] + self.icc_centre_x
+            self.next_y = p[1] + self.icc_centre_y
+            self.next_theta = p[2] + self.omega
+
+
     def slide(self):
+        prev_x = self.x
+        prev_y = self.y
+        prev_theta = self.theta
         theta1 = self.collided_wall.angle
         direction = cos(theta1 - self.theta)
         self.theta += self.omega
@@ -206,6 +241,16 @@ class Robot:
         if direction > 0.0:
             self.x += self.velocity * cos(theta1)
             self.y += self.velocity * sin(theta1)
+        self.to_collide = False
+        self.collision_detection(self.x, self.y, False)
+        if (self.to_collide):
+            self.color = GOLD
+            self.x = prev_x
+            self.y = prev_y
+            self.theta = prev_theta + self.omega
+            self.update_icc()
+            self.draw()
+            return
         self.theta += self.omega
 
         self.update_icc()
@@ -230,18 +275,38 @@ class Robot:
         text = font.render(message, True, (0, 128, 0))
         return text
 
-    def collision_detection(self):
+    # def collision_detection(self):
+    #     self.color = GREEN
+    #     self.collision_num = 0
+    #     for wall in walls:
+    #         wall.color = GOLD
+    #         perpendicular_distance = wall.get_perpendicular_distance(self.x, self.y)
+    #         wall.dist = perpendicular_distance
+    #         if (wall.hit == True):
+    #             self.collision = True
+    #             self.collided_wall = wall
+    #             self.collision_num += 1
+
+    def collision_detection(self, x, y, next = False):
         self.color = GREEN
         self.collision_num = 0
+        self.walls_to_collide = []
+        self.to_collide = False
         for wall in walls:
             wall.color = GOLD
-            perpendicular_distance = wall.get_perpendicular_distance(self.x, self.y)
+            perpendicular_distance = wall.get_perpendicular_distance(x, y)
             wall.dist = perpendicular_distance
-            if (wall.hit == True):
+            if (next == True and wall.hit == True):
+                self.walls_to_collide.append(wall)
+                self.to_collide = True
+            if (wall.hit == True and next == False):
                 self.collision = True
+                self.to_collide = True
                 self.collided_wall = wall
                 self.collision_num += 1
-
+        if next and len(self.walls_to_collide) > 0:
+            self.collided_wall = self.walls_to_collide[0]
+            self.collided_wall.color = BLACK
 
 class Wall:
     def __init__(self, start_point, end_point, color):
