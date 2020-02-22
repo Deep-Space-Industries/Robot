@@ -9,6 +9,7 @@ import random
 import math
 import numpy as np
 import pygame.gfxdraw as gfxdraw
+from shapely.geometry import *
 
 WHITE = (255, 255, 255)
 GREEN = (20, 255, 140)
@@ -50,23 +51,21 @@ class Robot:
         self.icc_radius = None
         self.icc_centre_x = None
         self.icc_centre_y = None
-        self.t = 0
+        self.time = 0
         self.update_icc()
         self.decrease_factor = 1
         self.increase_factor = 1
         self.walls = walls
         self.collision = None
         self.collided_wall = None
+        self.time_step = 1
+        self.sensors = []
 
     def calculate_to_sensor_distance(self,centre,sensor_point):
         m1= (sensor_point[1]-centre[1])/(sensor_point[0]-centre[0])
         c1=(sensor_point[0]*centre[1]-centre[0]*sensor_point[1])/(sensor_point[0]-centre[0])
         for wall in self.walls:
             wall_distance_list=[]
-            m2=0
-            c2=0
-            intersection_point_x=None
-            intersection_point_y=None
             if wall.end_point[0]!= wall.start_point[0]:
                 m2=(wall.end_point[1]-wall.start_point[1])/(wall.end_point[0]-wall.start_point[0])
                 c2=(wall.end_point[0]*wall.start_point[1]-wall.start_point[0]*wall.end_point[1])/(wall.end_point[0]-wall.start_point[0])
@@ -109,36 +108,89 @@ class Robot:
         self.thetarecord.append(self.theta)
         # print(f"x, y: {[self.x, self.y]}")
         angle = 0
+        self.sensors = []
         while (angle <= 360):
             # pygame.draw.line(screen, BLUE, (self.x + self.radius * cos(self.theta + angle * PI / 180),
             #                                 self.y + self.radius * sin(self.theta + angle * PI / 180)), \
             #                  (self.x + (self.radius + 10) * cos(self.theta + angle * PI / 180),
             #                   self.y + (self.radius + 10) * sin(self.theta + angle * PI / 180)), 2)
-            pygame.draw.circle(screen, BLUE, (
-                int(round(self.x + self.radius * cos(self.theta + angle * PI / 180))),
-                int(round(self.y + self.radius * sin(self.theta + angle * PI / 180)))
-            ), 2)
-            self.collision_detection(self.x, self.y, False)
-            print(f"near {self.nearest_dist}")
+            self.sensors.append(Sensor([self.x + self.radius * cos(self.theta + angle * PI / 180), \
+                                       self.y + self.radius * sin(self.theta + angle * PI / 180)]))
+
+            # self.collision_detection(self.x, self.y, False)
+            # print(f"near {self.nearest_dist}")
             # print(f"c {cos(angle)}")
-            value = (self.nearest_dist / cos(np.deg2rad(angle))) - self.radius
-            print(f"value {value}")
+            # value = (self.nearest_dist / cos(np.deg2rad(angle))) - self.radius
+            # print(f"value {value}")
             # if 89 < angle < 271:
             #     value = None
 
             # value=self.calculate_to_sensor_distance([self.x,self.y],[self.x + self.radius * cos(self.theta + angle * PI / 180), \
             #                                                          self.y + self.radius * sin(self.theta + angle * PI / 180)])
-            if (value != None and 0 <= value <= 300 ):
-                print(value)
-                rvalue = round(value)
-                text = font.render(f"{rvalue}", True, BLACK)
-                textRect = text.get_rect()
-                textRect.center = (self.x + 2 * self.radius * cos(self.theta + angle * PI / 180), \
-                                   self.y + 2 * self.radius * sin(self.theta + angle * PI / 180))
-
-                screen.blit(text, textRect)
+            # if (value != None and 0 <= value <= 300 ):
+            #     print(value)
+            #     rvalue = round(value)
+            #     text = font.render(f"{rvalue}", True, BLACK)
+            #     textRect = text.get_rect()
+            #     textRect.center = (self.x + 2 * self.radius * cos(self.theta + angle * PI / 180), \
+            #                        self.y + 2 * self.radius * sin(self.theta + angle * PI / 180))
+            #
+            #     screen.blit(text, textRect)
 
             angle = angle + 30
+
+    def draw_sensors(self):
+        circle_centre = Point((self.x, self.y))
+        font = pygame.font.SysFont('FUTURA', 12)
+        for sensor in self.sensors:
+            sensor_point = Point((sensor.x, sensor.y))
+            sensor.to = None
+            pygame.draw.circle(screen, BLUE, (
+                int(round(sensor.x)),
+                int(round(sensor.y))
+            ), 2)
+            sensor_distance = 10 ** 10
+            for wall in walls:
+                px, py = sensor.line_line_intersection(self.x, self.y, wall)
+                sensor_reach = Point((px, py))
+                point_in_the_wall =  wall.linestring.distance(sensor_reach)
+                sensor_to_wall = sensor_point.distance(sensor_reach)
+                if point_in_the_wall >= 1 or sensor_to_wall >= 200:
+                    continue
+                if sensor_to_wall < sensor_distance:
+                    sensor_distance = sensor_to_wall
+                    sensor.observed_wall = wall
+                    sensor.to = sensor_reach
+                    sensor.dist_to_wall = round(sensor_to_wall, 2)
+            if (sensor.to is None):
+                text = font.render("> 200", True, SILVER, BLACK)
+                textRect = text.get_rect()
+                textRect.center = (sensor.x, sensor.y)
+                screen.blit(text, textRect)
+                sensor.value = np.inf
+                continue
+            line_from_sensor_to_wall = LineString((sensor_point, sensor.to))
+            centre_on_the_line = line_from_sensor_to_wall.distance(circle_centre)
+            if centre_on_the_line <= 2:
+                text = font.render("> 200", True, SILVER, BLACK)
+                textRect = text.get_rect()
+                textRect.center = (sensor.x, sensor.y)
+                screen.blit(text, textRect)
+                sensor.value = np.inf
+                continue
+            pygame.draw.line(screen, LIGHTBLUE, \
+                             (int(round(sensor.x)), int(round(sensor.y))), \
+                             (int(round(sensor.to.xy[0][0])), int(round(sensor.to.xy[1][0]))), 2)
+            text = font.render(f"{sensor.dist_to_wall}", True, BLACK, SILVER)
+            textRect = text.get_rect()
+            textRect.center = (sensor.to.xy[0][0], sensor.to.xy[1][0])
+            screen.blit(text, textRect)
+            sensor.value = sensor.dist_to_wall
+        print([x.value for x in self.sensors])
+        return
+
+
+
 
     def draw_icc(self):
         if (self.left_velocity == self.right_velocity):
@@ -189,122 +241,144 @@ class Robot:
                 (self.right_velocity - self.left_velocity) + 0.0001)
         self.icc_centre_x = self.x - self.icc_radius * sin(self.theta)
         self.icc_centre_y = self.y + self.icc_radius * cos(self.theta)
+        max_v = max(abs(self.left_velocity), abs(self.right_velocity))
+        if (max_v // 5 != 0):
+            self.time_step = round(1 / (max_v // 5), 2)
+        else:
+            self.time_step = 1
+        self.time_step = 1/1
+
+    def update_pos(self, x = None, y = None, theta = None, timestep = None):
+        if x is None:
+            x = self.x
+            y = self.y
+            theta = self.theta
+            timestep = self.time_step
+
+        if (self.left_velocity == self.right_velocity):
+            new_x = x + timestep * (self.velocity * cos(theta))
+            new_y = y + timestep * (self.velocity * sin(theta))
+            new_theta = theta + self.omega * timestep
+        else:
+            p = np.dot(np.array([[cos(self.omega * timestep), -sin(self.omega * timestep), 0],
+                                 [sin(self.omega * timestep), cos(self.omega * timestep), 0],
+                                 [0, 0, 1]]), \
+                       np.array(
+                           [self.icc_radius * sin(theta),
+                            -self.icc_radius * cos(theta),
+                            theta]))
+            new_x = p[0] + self.icc_centre_x
+            new_y = p[1] + self.icc_centre_y
+            new_theta = p[2] + self.omega * timestep
+        return [new_x, new_y, new_theta]
 
     def move(self):
-        prev_x = self.x
-        prev_y = self.y
-        prev_theta = self.theta
+        prev_x, prev_y, prev_theta = self.x, self.y, self.theta
         self.collision = False
         self.collided_wall = None
         self.collision_num = 0
-        self.blit_collision_info()
-        if (self.left_velocity == self.right_velocity):
-            self.theta += self.omega
-            self.x += self.velocity * cos(self.theta)
-            self.y += self.velocity * sin(self.theta)
-        else:
-            p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
-                                 [sin(self.omega), cos(self.omega), 0],
-                                 [0, 0, 1]]), \
-                       np.array(
-                           [self.icc_radius * sin(self.theta),  # self.x - self.icc_centre_x,
-                            -self.icc_radius * cos(self.theta),  # self.y - self.icc_centre_y,
-                            self.theta]))
-            self.x = p[0] + self.icc_centre_x
-            self.y = p[1] + self.icc_centre_y
-            self.theta = p[2] + self.omega
-            self.t += 1
+        self.color = GREEN
+        # self.blit_collision_info()
+        Colliding = self.get_positions_new(self.x, self.y, self.theta)
 
-        self.next_second()
-        self.to_collide = False
-        self.collision_detection(self.next_x, self.next_y, True)
-        if (self.to_collide):
-            self.color = GOLD
-            self.x = prev_x
-            self.y = prev_y
-            self.theta = prev_theta
-            self.slide()
+        # next_x, next_y, next_theta = self.next_second()
+        # if self.collision_detection1(next_x, next_y):
+        if Colliding:
+            # self.color = LIGHTBLUE
+            # self.x = prev_x
+            # self.y = prev_y
+            # self.theta = prev_theta
+            # self.x, self.y, self.theta = next_x, next_y, next_theta
+            Colliding1 = self.get_positions_new(self.x, self.y, self.theta, slide = True)
+            # Colliding1 = self.get_positions(next_x, next_y, next_theta, slide = True)
+            # if self.collision_detection1(next_x, next_y):
+            if Colliding1:
+                self.color = RED
+                self.x = prev_x
+                self.y = prev_y
+                self.theta = prev_theta + self.omega
+                self.draw()
+                return
+            next_x, next_y, next_theta = self.slide()
+            self.x, self.y, self.theta = next_x, next_y, next_theta
+            self.draw()
+            self.update_icc()
             return
-
-        # self.collision_detection()
-        # if self.collision:
-        #     self.x = prev_x
-        #     self.y = prev_y
-        #     # self.theta = prev_theta
-        #     if self.collision_num > 2:
-        #         self.theta += self.omega
-        #         self.update_icc()
-        #         self.draw()
-        #         return
-        #     else:
-        #         self.slide()
-        #         return
+        self.x, self.y, self.theta = self.update_pos()
         self.draw()
 
     def next_second(self):
-        self.next_x = None
-        self.next_y = None
-        self.next_theta = None
-        if (self.left_velocity == self.right_velocity):
-            self.next_x = self.x + self.velocity * cos(self.theta)
-            self.next_y = self.y +  self.velocity * sin(self.theta)
-            self.next_theta = self.theta + self.omega
+        next_x, next_y, next_theta = self.update_pos()
+        return next_x, next_y, next_theta
+
+    def slide(self, time_step = None):
+        if time_step is not None:
+            delta = time_step
         else:
-            p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
-                                 [sin(self.omega), cos(self.omega), 0],
-                                 [0, 0, 1]]), \
-                       np.array(
-                           [self.icc_radius * sin(self.theta),  # self.x - self.icc_centre_x,
-                            -self.icc_radius * cos(self.theta),  # self.y - self.icc_centre_y,
-                            self.theta]))
-            self.next_x = p[0] + self.icc_centre_x
-            self.next_y = p[1] + self.icc_centre_y
-            self.next_theta = p[2] + self.omega
-
-
-    def slide(self):
-        prev_x = self.x
-        prev_y = self.y
-        prev_theta = self.theta
+            delta = 1
+        prev_x, prev_y, prev_theta= self.x, self.y, self.theta
         theta1 = self.collided_wall.angle
         direction = cos(theta1 - self.theta)
-        self.theta += self.omega
-        if direction <= -0.99 or direction > 0.99:
-            self.collision = False
-            p = np.dot(np.array([[cos(self.omega), -sin(self.omega), 0],
-                                 [sin(self.omega), cos(self.omega), 0],
-                                 [0, 0, 1]]), \
-                       np.array(
-                           [self.icc_radius * sin(self.theta),  # self.x - self.icc_centre_x,
-                            -self.icc_radius * cos(self.theta),  # self.y - self.icc_centre_y,
-                            self.theta]))
-            self.x = p[0] + self.icc_centre_x
-            self.y = p[1] + self.icc_centre_y
-            self.theta = p[2] + self.omega
-            self.t += 1
-            self.draw()
-            return
-        if direction <= 0.0:
-            self.x += self.velocity * - cos(theta1)
-            self.y += self.velocity * - sin(theta1)
-        if direction > 0.0:
-            self.x += self.velocity * cos(theta1)
-            self.y += self.velocity * sin(theta1)
-        # self.to_collide = False
-        # self.collision_detection(self.x, self.y, False)
-        # if (self.to_collide):
-        #     self.color = GOLD
-        #     self.x = prev_x
-        #     self.y = prev_y
-        #     self.theta = prev_theta + self.omega
-        #     self.update_icc()
-        #     self.draw()
-        #     return
-        self.theta += self.omega
 
-        self.update_icc()
-        self.draw()
-        # self.update_icc()
+        # if direction <= -0.99 or direction > 0.99:
+        #     next_x, next_y, next_theta, _ = self.update_pos(True)
+        #     return next_x, next_y, next_theta
+        if direction <= 0.0:
+            next_x = self.x + delta * (self.velocity * - cos(theta1))
+            next_y = self.y + delta * (self.velocity * - sin(theta1))
+        else:
+            next_x = self.x + delta * (self.velocity * cos(theta1))
+            next_y = self.y + delta * (self.velocity * sin(theta1))
+        next_theta = self.theta + self.omega * delta
+        return next_x, next_y, next_theta
+
+    def get_positions(self, startx, starty, start_theta, slide = False, steps = 5):
+        max_veloCT = max(abs(self.right_velocity), abs(self.left_velocity))
+        if max_veloCT > 15:
+            steps = max_veloCT // 3
+        time_step = 1 / steps
+        new_x, new_y, new_theta = startx, starty, start_theta
+        for i in range(steps):
+            if not slide:
+                next_step = self.update_pos(new_x, new_y, new_theta, time_step)
+            else:
+                next_step = self.slide(time_step)
+            new_x, new_y, new_theta = next_step[0], next_step[1], next_step[2]
+            c = self.detect_step(new_x, new_y)
+            if c:
+                print("approaching")
+                return True
+        return False
+
+    def get_positions_new(self, startx, starty, start_theta, slide = False, steps = 2):
+        time_step = 1 / steps
+        new_x, new_y, new_theta = startx, starty, start_theta
+        start_point = Point(startx, starty)
+        e_points = []
+        for i in range(steps):
+            if not slide:
+                next_step = self.update_pos(new_x, new_y, new_theta, time_step)
+            else:
+                next_step = self.slide(time_step)
+            new_x, new_y, new_theta = next_step[0], next_step[1], next_step[2]
+            # c = self.detect_step(new_x, new_y)
+            e_points.append(Point([new_x, new_y]))
+
+        line1 = LineString([start_point, e_points[0]])
+        line2 = LineString([e_points[0], e_points[1]])
+        line3 = LineString([start_point, e_points[1]])
+        for wall in walls:
+            wline = wall.linestring
+            dist1 = start_point.distance(wline)
+            dist2 = e_points[1].distance(wline)
+            C1 = wline.intersection(line1).coords
+            C2 = wline.intersection(line2).coords
+            C3 = wline.intersection(line3).coords
+            if (C1 or C2 or C3 or dist2 <= self.radius):
+                self.collided_wall = wall
+                self.color = BLACK
+                return True
+        return False
 
     def blit_collision_info(self):
         direction = None
@@ -317,51 +391,72 @@ class Robot:
         textRect.center = (self.x, self.y - 50)
         screen.blit(text, textRect)
 
+    def detect_step(self, x, y):
+        # self.collided_wall = None
+        i = 10 ** 10
+        count = 0
+        for wall in walls:
+            wall.color = GOLD
+            perpendicular_distance = wall.get_perpendicular_distance(x, y, False)
+            if perpendicular_distance < i:
+                i = perpendicular_distance
+            if (wall.hit):
+                count += 1
+                self.collided_wall = wall
+            wall.hit = False
+        if count > 0:
+            return True
+        else:
+            return False
 
-    def message_display(self):
-        messages = [f"l velocity: {self.left_velocity}", \
-                    f"r velocity: {self.right_velocity}"]
-        message = "\n".join(messages)
-        text = font.render(message, True, (0, 128, 0))
-        return text
-
-    # def collision_detection(self):
-    #     self.color = GREEN
-    #     self.collision_num = 0
-    #     for wall in walls:
-    #         wall.color = GOLD
-    #         perpendicular_distance = wall.get_perpendicular_distance(self.x, self.y)
-    #         wall.dist = perpendicular_distance
-    #         if (wall.hit == True):
-    #             self.collision = True
-    #             self.collided_wall = wall
-    #             self.collision_num += 1
+    def collision_detection1(self, x, y):
+        self.color = GREEN
+        self.nearest_wall = None
+        self.nearest_dist = None
+        i = 10 ** 10
+        count = 0
+        for wall in walls:
+            wall.color = GOLD
+            perpendicular_distance = wall.get_perpendicular_distance(x, y, False)
+            if perpendicular_distance < i:
+                i = perpendicular_distance
+                self.nearest_wall = wall
+                self.collided_wall = wall
+                self.nearest_dist = i
+            wall.dist = perpendicular_distance
+            if (wall.hit):
+                count += 1
+        if count > 0:
+            return True
+        else:
+            return False
 
     def collision_detection(self, x, y, next = False):
+        # discarded
         self.color = GREEN
         self.collision_num = 0
         self.walls_to_collide = []
         self.to_collide = False
         self.nearest_wall = None
         self.nearest_dist = None
-        i = 10**10
+        i = 10 ** 10
         for wall in walls:
             wall.color = GOLD
             perpendicular_distance = wall.get_perpendicular_distance(x, y)
-            print(f"per {perpendicular_distance}")
             if perpendicular_distance < i:
                 i = perpendicular_distance
                 self.nearest_wall = wall
                 self.nearest_dist = i
             wall.dist = perpendicular_distance
-            if (next == True and wall.hit == True):
+            if (next and wall.hit):
                 self.walls_to_collide.append(wall)
                 self.to_collide = True
-            if (wall.hit == True and next == False):
+            if (not next and wall.hit):
                 self.collision = True
                 self.to_collide = True
                 self.collided_wall = wall
                 self.collision_num += 1
+        self.walls_to_collide.sort(key = lambda x: x.dist)
         if next and len(self.walls_to_collide) > 0:
             self.collided_wall = self.walls_to_collide[0]
             self.collided_wall.color = BLACK
@@ -376,48 +471,29 @@ class Wall:
         self.angle = self.get_angle()
         self.dist = None
         self.hit = None
+        self.linestring = LineString([(start_point[0], start_point[1]), (end_point[0], end_point[1])])
 
     def draw(self):
         pygame.draw.line(screen, self.color, self.start_point, self.end_point, 3)
 
-    def get_perpendicular_distance(self, x, y):
+    def get_perpendicular_distance(self, x, y, draw = True):
         self.hit = False
-        if (self.end_point[0] != self.start_point[0]):
-            self.m = (self.end_point[1] - self.start_point[1]) / (self.end_point[0] - self.start_point[0])
-            self.c = self.start_point[1] - (self.start_point[0]) * self.m
-            # print(abs(self.m*x+self.c-y)/(np.sqrt(self.m*self.m + 1)))
-            X = (x + self.m * y - self.m * self.c) / (self.m ** 2 + 1)
-            Y = self.m * ( (x + self.m * y - self.m * self.c) / (self.m ** 2 + 1)) + self.c
-            # pygame.draw.circle(screen, BLACK, (int(round((X))), int(round(Y))), 4)
-
-            if (
-                (min(self.end_point[0], self.start_point[0]) <= int(round(X)) <= max(self.start_point[0], self.end_point[0])) and \
-                (min(self.end_point[1], self.start_point[1]) <= int(round(Y)) <= max(self.start_point[1], self.end_point[1])) and \
-                (np.sqrt((X - x) ** 2 + (Y - y) ** 2) < 20)
-            ):
-                self.hit = True
-                self.color = BLACK
-                self.nearest_point = [X, Y]
-            return abs(self.m * x + self.c - y) / (np.sqrt(self.m * self.m + 1))
-        else:
-            # print(abs(x-self.start_point[0]))
-            X = self.start_point[0]
-            Y = y
-            self.nearest_point = [X, Y]
-            # pygame.draw.circle(screen, BLACK, (int(round((X))), int(round(Y))), 4)
-            if (
-                (min(self.end_point[0], self.start_point[0]) <= int(round(X)) <= max(self.start_point[0], self.end_point[0])) and \
-                (min(self.end_point[1], self.start_point[1]) <= int(round(Y)) <= max(self.start_point[1], self.end_point[1])) and \
-                (np.sqrt((X - x) ** 2 + (Y - y) ** 2) < 20)
-            ):
-                self.hit = True
-                self.color = BLACK
-                self.nearest_point = [X, Y]
-            return abs(y - self.start_point[1])
-
+        point = Point(x, y)
+        prjec = self.linestring.project(point)
+        nearest_point = self.linestring.interpolate(prjec).coords
+        point2 = Point([nearest_point[0][0], nearest_point[0][1]])
+        dist = point.distance(point2)
+        if len(nearest_point) > 0:
+            if draw:
+                pygame.draw.circle(screen, BLACK, [int(round(nearest_point[0][0])), int(round(nearest_point[0][1]))], 4, 4)
+            self.nearest_point = [nearest_point[0][0], nearest_point[0][1]]
+        if dist <= 20:
+            self.hit = True
+            self.color = BLACK
+            self.dist = dist
+        return dist
 
     def get_angle(self):
-
         if (self.end_point[0] != self.start_point[0]):
             self.m = (self.end_point[1] - self.start_point[1]) / (self.end_point[0] - self.start_point[0])
             return np.arctan(self.m)
@@ -428,6 +504,24 @@ class Wall:
 def load_image(name):
     image = pygame.image.load(name)
     return image
+
+class Sensor():
+    def __init__(self, position):
+        self.x = position[0]
+        self.y = position[1]
+        self.value = None
+
+    def line_line_intersection(self, cx, cy, wall):
+        x1, y1 = self.x, self.y
+        x2, y2 = cx, cy
+        x3, y3 = wall.start_point[0], wall.start_point[1]
+        x4, y4 = wall.end_point[0], wall.end_point[1]
+
+        self.Px = ( ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / \
+               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) )
+        self.Py = ( ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / \
+               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) )
+        return self.Px, self.Py
 
 
 class Player(pygame.sprite.Sprite):
@@ -496,27 +590,21 @@ def main():
 
             screen.fill(BLACK)
             text = font.render(f'L: {block.left_velocity}; R: {block.right_velocity}', True, GREEN, BLUE)
-            text1 = font.render(f"{block.collision}. {()}", True, GREEN, BLUE)
             textRect = text.get_rect()
-            textRect.center = (800 , 300 )
-            textRect1 = text1.get_rect()
-            textRect1.center = (800,850)
-            print(block.theta)
+            textRect.center = (800, 300)
+            # print(block.theta)
             # player1.update(block.x, block.y, block.theta, block.radius, 20)
             # player2.update(block.x, block.y, block.theta, block.radius, 0)
-            screen.fill((255, 255, 255))
+            screen.fill((255, 128, 128))
             # screen.blit(player1.image, player1.rect)
-            # screen.blit(player2.image, player2.rect)
             screen.blit(text, textRect)
-            screen.blit(text1, textRect1)
+            # screen.blit(player2.image, player2.rect)
             for w in walls:
                 w.draw()
             block.move()
             block.draw_direction()
             block.draw_icc()
-            # block.draw_direction(my_group)
-            # block.draw_icc()
-            # my_group.draw(screen)
+            block.draw_sensors()
             # pygame.display.flip()
             clock.tick(120)
             pygame.display.update()
@@ -546,7 +634,7 @@ if __name__ == '__main__':
     # walls.append(wall4)
     walls.append(Wall((100, 200), (400, 300), GOLD))
     walls.append(Wall((600, 500), (800, 900), GOLD))
-    walls.append((Wall((300, 500) , (300, 750), GOLD)))
+    walls.append(Wall((300, 500), (300, 750), GOLD))
     walls.append(Wall((600, 400), (600, 805), GOLD))
     walls.append(east_border)
     walls.append(west_border)
