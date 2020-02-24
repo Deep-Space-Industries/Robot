@@ -52,6 +52,7 @@ class Robot:
         self.walls = walls
         self.collision = None
         self.collided_wall = None
+        self.to_collide = []
         self.time_step = 1
         self.sensors = []
 
@@ -194,52 +195,88 @@ class Robot:
         self.collided_wall = None
         self.collision_num = 0
         self.color = GREEN
-        Colliding = self.get_positions_new(self.x, self.y, self.theta)
-        if Colliding:
-            self.collision_num = 0
-            Colliding1 = self.get_positions_new(self.x, self.y, self.theta, slide = True)
-            if self.collision_num > 1:
-                self.color = BLACK
-                self.draw()
-                self.theta = prev_theta + self.omega
-                # self.update_icc()
-                return
-            if Colliding1:
-                self.color = RED
-                self.x, self.y, self.theta = self.slide()
-                # self.theta = prev_theta + self.omega
-                # self.update_icc()
-                self.draw()
-                return
+
+        self.ppdistance_to_each_wall()
+
+        rColliding = self.get_positions_new(self.x, self.y, self.theta)
+        sColliding = self.get_positions_new(self.x, self.y, self.theta, slide = True)
+
+        if (not sColliding and not rColliding) or (sColliding and not rColliding):
+            self.x, self.y, self.theta = self.update_pos()
+            self.draw()
+            return
+        elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide()
             self.color = GREY
             self.draw()
             self.update_icc()
             return
-        self.x, self.y, self.theta = self.update_pos()
-        self.draw()
+        elif (sColliding and rColliding):
+            self.theta += self.omega
+            self.color = BLACK
+            self.update_icc()
+            self.draw()
+            return
+        return
+
 
     def slide(self, x = None, y = None, theta = None, time_step = 1):
+        along_wall = None
+        d = np.inf
+        if len(self.to_collide) == 1:
+            print("1")
+            along_wall = self.to_collide[0]
+        else:
+            print("2")
+            for w in self.to_collide:
+                print(f"{w.dist}D")
+                if w.dist < d:
+                    print(f"{w.dist} < {d}")
+                    d = w.dist
+                    along_wall = w
         if x is None:
             x = self.x
             y = self.y
             theta = self.theta
-        theta1 = self.collided_wall.angle
+        theta1 = along_wall.angle
+        # theta1 = self.collided_wall.angle
         direction = cos(theta1 - theta)
 
-        if -0.02 <= direction <= 0.02 or direction >= 0.99 or direction <= -0.99:
+        if -0.005 <= direction <= 0.005 or direction >= 0.995 or direction <= -0.995:
             next_x, next_y, next_theta = self.update_pos(x, y, theta, time_step)
             return next_x, next_y, next_theta
 
-        if direction <= -0.02:
+        if direction <= 0.0:
             next_x = x + time_step * (self.velocity * - cos(theta1))
             next_y = y + time_step * (self.velocity * - sin(theta1))
-        if direction >= 0.02:
+        if direction >= 0.0:
             next_x = x + time_step * (self.velocity * cos(theta1))
             next_y = y + time_step * (self.velocity * sin(theta1))
         next_theta = theta + self.omega * time_step
         return next_x, next_y, next_theta
 
+    def ppdistance_to_each_wall(self):
+        point = Point(self.x, self.y)
+        closest_dist = np.inf
+        closest_wall = None
+        self.to_collide = []
+        for wall in walls:
+            project = wall.linestring.project(point)
+            nearest_point = wall.linestring.interpolate(project).coords
+            point2 = Point([nearest_point[0][0], nearest_point[0][1]])
+            if point2.distance(wall.linestring) > 2:
+                continue
+            pygame.draw.circle(screen, BLACK, (int(round(point2.xy[0][0])), int(round(point2.xy[1][0]))), 6)
+            dist = point.distance(point2)
+            if dist < closest_dist:
+                closest_dist = dist
+                closest_wall = wall
+                if dist < self.radius:
+                    wall.color = GOLD
+                    wall.dist = dist
+                    self.to_collide.append(wall)
+        if not self.to_collide:
+            self.to_collide.append(closest_wall)
 
     def get_positions_new(self, startx, starty, start_theta, slide = False, steps = 2):
         time_step = 1 / steps
@@ -268,18 +305,18 @@ class Robot:
             C1 = wline.intersection(line1).coords
             C2 = wline.intersection(line2).coords
             C3 = wline.intersection(line3).coords
-            if (C1 or C2 or C3 or dist1 < self.radius or dist2 < self.radius or dist3 < self.radius):
-                colliding_walls.append(wall)
-                self.collision_num += 1
-                dist2s.append(dist2)
-        if colliding_walls:
-            print(len(colliding_walls))
-            j = dist2s.index(min(dist2s))
-            self.collided_wall = colliding_walls[j]
-            self.collided_wall.color = GOLD
-            return True
-        else:
-            return False
+            if (C1 or C2 or C3 or dist2 < self.radius or dist3 < self.radius):
+                return True
+                # colliding_walls.append(wall)
+                # self.collision_num += 1
+                # dist2s.append(dist2)
+        # if colliding_walls:
+        #     print(len(colliding_walls))
+        #     j = dist2s.index(min(dist2s))
+        #     self.collided_wall = colliding_walls[j]
+        #     self.collided_wall.color = GOLD
+        #     return True
+        return False
 
 class Wall:
     def __init__(self, start_point, end_point, color):
@@ -436,5 +473,5 @@ if __name__ == '__main__':
     walls.append(west_border)
     walls.append(south_border)
     walls.append(north_border)
-    block = Robot(520, 590 , 2 , 3 , 20 , walls)
+    block = Robot(220, 290 , 2 , 3 , 20 , walls)
     main()
