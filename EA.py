@@ -105,5 +105,6 @@ for t in range(n_epochs):
         plt.xlim(-10, 10)
         plt.ylim(-10, 10)
 
+
         plt.show()
 
