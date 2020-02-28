@@ -31,23 +31,31 @@ class NeuralNetwork:
         self.biasIHH.append(b)
         self.weightsHO = randomWeights(np.zeros((self.hiddennodes[-1], self.outputnodes), dtype=float))
         self.biasHO = randomWeights(np.zeros((1, self.outputnodes), dtype=float))
+
         self.learningRate = learningRate
 
     def forwardPropagation(self, x):
-        # Outputs: Hidden Layer
-        a1 = np.dot(self.weights1, x)
-        a1 = np.add(a1, self.bias1)
-        # Activation function: Hidden Layer
-        for num in range(self.hiddennodes):
+        # 1st Hidden Layer
+        a1 = np.dot(self.weightsIH.T, x)
+        a1 = np.add(a1, self.biasIHH[0])
+        print("Trans")
+        print(self.weightsIH.T)
+        print("A1")
+        print(a1)
+
+        # Activation function: 1st Hidden Layer
+        for num in range(self.hiddennodes[0]):
             a1[0][num] = sigmoid(a1[0][num])
+        print("Sigmoided A1")
+        print(a1)
 
         # Outputs: Output Layer
-        a2 = np.dot(self.weights2, a1.T)
-        a2 = np.add(a2, self.bias2.T)
+        #a2 = np.dot(self.weights2, a1.T)
+        #a2 = np.add(a2, self.bias2.T)
         # Activation function: Output Layer
-        for num in range(self.outputnodes):
-            a2[num][0] = sigmoid(a2[num][0])
-        return a2
+        #for num in range(self.outputnodes):
+        #    a2[num][0] = sigmoid(a2[num][0])
+        return a1
 
 nn = NeuralNetwork(2,4,[3,4,5,6],3, 0.1)
 print("Input -> Hidden")
@@ -60,3 +68,6 @@ print("Bias Input -> Hidden | Bias Hidden -> Hidden")
 [print(i) for i in nn.biasIHH]
 print("Bias Hidden -> Output")
 print(nn.biasHO)
+
+input = np.array([[5,10]])
+nn.forwardPropagation(input[0])
