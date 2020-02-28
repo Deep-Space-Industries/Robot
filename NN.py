@@ -6,9 +6,9 @@ rcParams['font.sans-serif'] = ['DejaVu Sans']
 import matplotlib.pyplot as plt
 
 LAYERS = 3
-INPUT_NODES = 8
-OUTPUT_NODES = 8
-HIDDEN_NODES = 3
+INPUT_NODES = 12
+OUTPUT_NODES = 2
+HIDDEN_NODES = 6
 ALPHA = 0.01
 OUTPUT_HISTORY = []
 
