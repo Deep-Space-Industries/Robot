@@ -1,6 +1,5 @@
 import numpy as np
 import random
-from random import randrange
 
 # Sets random weights between 0 and 1 for each element in a matrix
 def randomWeights(x):
@@ -8,6 +7,10 @@ def randomWeights(x):
         for j in range(len(x[i])):
             x[i][j] = random.uniform(0,1)
     return x
+
+# Applying sigmoid function to a value x
+def sigmoid(x):
+    return 1/(1+np.exp(-x))
 
 class NeuralNetwork:
     def __init__(self, inputnodes, n_hiddenLayers, hiddennodes, outputnodes, learningRate):
