@@ -45,8 +45,8 @@ class Robot:
         self.icc_radius = None
         self.icc_centre_x = None
         self.icc_centre_y = None
-        self.time = 0
         self.update_icc()
+        self.time = 0
         self.decrease_factor = 1
         self.increase_factor = 1
         self.walls = walls
@@ -201,6 +201,7 @@ class Robot:
         rColliding = self.get_positions_new(self.x, self.y, self.theta)
         sColliding = self.get_positions_new(self.x, self.y, self.theta, slide = True)
 
+        #
         if (not sColliding and not rColliding) or (sColliding and not rColliding):
             self.x, self.y, self.theta = self.update_pos()
             self.draw()
@@ -208,8 +209,8 @@ class Robot:
         elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide()
             self.color = GREY
-            self.draw()
             self.update_icc()
+            self.draw()
             return
         elif (sColliding and rColliding):
             self.theta += self.omega
@@ -357,6 +358,54 @@ class Sensor():
                ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) )
         return self.Px, self.Py
 
+
+class Dust:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.collected = False
+
+    def draw(self):
+        if self.collected:
+            return
+        if not self.collected:
+            gfxdraw.aacircle(screen, int(round(self.x)), int(round(self.y)), 1, GREY)
+
+    def clear(self):
+        if not self.collected:
+            self.collected = True
+        else:
+            return
+
+class Environment:
+    def __init__(self, density = 2):
+        self.all_dusts = []
+        self.cleared_dust = 0
+        if density == 3:
+            interval = 12
+            for w in range(8, width - 8, interval):
+                for h in range(8, height - 8, interval):
+                    self.all_dusts.append(Dust(w, h))
+        if density == 2:
+            interval = 18
+            for w in range(8, width - 8, interval):
+                for h in range(8, height - 8, interval):
+                    self.all_dusts.append(Dust(w, h))
+        if density == 1:
+            interval = 24
+            for w in range(8, width - 8, interval):
+                for h in range(8, height - 8, interval):
+                    self.all_dusts.append(Dust(w, h))
+
+    def draw_dusts(self, robot):
+        for d in self.all_dusts:
+            dist = np.sqrt((d.x - robot.x) ** 2 + (d.y - robot.y) ** 2)
+            if dist <= robot.radius:
+                self.cleared_dust += 1
+                d.clear()
+            d.draw()
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, size=(200, 200)):
         super(Player, self).__init__()
@@ -433,6 +482,7 @@ def main():
             # player1.update(block.x, block.y, block.theta, block.radius, 20)
             # player2.update(block.x, block.y, block.theta, block.radius, 0)
             screen.fill((255, 128, 128))
+
             blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
             # screen.blit(player2.image, player2.rect)
             block.move()
@@ -441,6 +491,8 @@ def main():
                 w.draw()
             block.draw_icc()
             block.draw_sensors()
+            e.draw_dusts(block)
+
             # pygame.display.flip()
             clock.tick(120)
             pygame.display.update()
@@ -473,5 +525,6 @@ if __name__ == '__main__':
     walls.append(west_border)
     walls.append(south_border)
     walls.append(north_border)
+    e = Environment(3)
     block = Robot(220, 290 , 2 , 3 , 20 , walls)
     main()
