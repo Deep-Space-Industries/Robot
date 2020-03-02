@@ -2,6 +2,7 @@ import numpy as np
 import random
 import math
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 
 #
 mu = 0.0
@@ -87,12 +88,15 @@ markers = ["*"]  # Symbols for different particles
 xxx = np.linspace(-10, 10, 1000)
 yyy = np.linspace(-10, 10, 1000)
 X, Y = np.meshgrid(xxx, yyy)
-Z = 20 + (X * X - 10 * np.cos(2 * np.pi * X)) + (Y * Y - 10 * np.cos(2 * np.pi * Y))  # Rastrigin function
-#Z = (1 - X) ** 2 + 100 * (Y - X * X) ** 2  # Rosenbrock function
+# Z = 20 + (X * X - 10 * np.cos(2 * np.pi * X)) + (Y * Y - 10 * np.cos(2 * np.pi * Y))  # Rastrigin function
+Z = (1 - X) ** 2 + 100 * (Y - X * X) ** 2  # Rosenbrock function
 
 for t in range(n_epochs):
-    if(t%100==0):
+    if(t%50==0):
         print(t + 1)
+        # plt.contour(X, Y, Z, locator=ticker.LogLocator(), colors='k')
+        contourf = plt.contourf(X, Y, Z, locator=ticker.LogLocator())
+        # Calling environment genotype methods
 
         # Start drawing
         plt.title("Number of total iterations: " + str(t + 1))
@@ -104,4 +108,5 @@ for t in range(n_epochs):
 
         plt.xlim(-10, 10)
         plt.ylim(-10, 10)
+        plt.colorbar(contourf, orientation='horizontal')
         plt.show()
