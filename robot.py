@@ -92,13 +92,13 @@ class Robot:
                     sensor.dist_to_wall = round(sensor_to_wall, 2)
             if (sensor.to is None):
                 blit_text("> 200", sensor.x, sensor.y, BLACK, None, 12)
-                sensor.value = np.inf
+                sensor.value = 200
                 continue
             line_from_sensor_to_wall = LineString((sensor_point, sensor.to))
             centre_on_the_line = line_from_sensor_to_wall.distance(circle_centre)
             if centre_on_the_line <= 2:
                 blit_text("> 200", sensor.x, sensor.y, BLACK, None, 12)
-                sensor.value = np.inf
+                sensor.value = 200
                 continue
             pygame.draw.line(screen, SILVER, \
                              (int(round(sensor.x)), int(round(sensor.y))), \
@@ -399,6 +399,7 @@ class Environment:
 
     def draw_dusts(self, robot):
         for d in self.all_dusts:
+            if d.collected: continue
             dist = np.sqrt((d.x - robot.x) ** 2 + (d.y - robot.y) ** 2)
             if dist <= robot.radius:
                 self.cleared_dust += 1

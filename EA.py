@@ -2,6 +2,7 @@ import numpy as np
 import random
 import math
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 
 mu = 0.0
 std = 5.0
@@ -36,6 +37,7 @@ class Population:
         self.history=[]
         self.bhistory=[]
         for i in range(n_epochs):
+            if i % 500 == 0: print(f"running epoch {i}")
             self.history.append([decoder(k.genotype) for k in self.individuals])
             self.individuals.sort(key=lambda x: x.fitness, reverse=False)
             self.bestIndividuals = self.individuals[:n_bestIndividuals]
@@ -65,7 +67,7 @@ def rastrigin(genotype):
     sigma = sigma + (i * i - 10 * math.cos(2 * math.pi * i))
   return 20 + sigma
 
-n_epochs = 5000
+n_epochs = 500
 myPop = Population(100, 60, 1, 30, n_epochs, 0.001)
 
 print("Survivors")
@@ -85,13 +87,14 @@ markers = ["*"]  # Symbols for different particles
 xxx = np.linspace(-10, 10, 1000)
 yyy = np.linspace(-10, 10, 1000)
 X, Y = np.meshgrid(xxx, yyy)
-Z = 20 + (X * X - 10 * np.cos(2 * np.pi * X)) + (Y * Y - 10 * np.cos(2 * np.pi * Y))  # Rastrigin function
-#Z = (1 - X) ** 2 + 100 * (Y - X * X) ** 2  # Rosenbrock function
+# Z = 20 + (X * X - 10 * np.cos(2 * np.pi * X)) + (Y * Y - 10 * np.cos(2 * np.pi * Y))  # Rastrigin function
+Z = (1 - X) ** 2 + 100 * (Y - X * X) ** 2  # Rosenbrock function
 
 for t in range(n_epochs):
     if(t%50==0):
         print(t + 1)
-
+        # plt.contour(X, Y, Z, locator=ticker.LogLocator(), colors='k')
+        contourf = plt.contourf(X, Y, Z, locator=ticker.LogLocator())
         # Calling environment genotype methods
 
         # Start drawing
@@ -104,6 +107,6 @@ for t in range(n_epochs):
 
         plt.xlim(-10, 10)
         plt.ylim(-10, 10)
-
+        plt.colorbar(contourf, orientation='horizontal')
         plt.show()
 
