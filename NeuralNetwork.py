@@ -12,6 +12,17 @@ def randomWeights(x):
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
+# Applying tanh function to a value x
+def tanh(x):
+    return (np.exp(x)-np.exp(-x))/(np.exp(x)+np.exp(-x))
+
+# Scale a set of values in a specific range of ranges
+def scaler(input, inputLower, inputUpper, outputLower, outputUpper):
+    output = []
+    for i in input:
+        output.append((outputLower + ((outputUpper - outputLower) / (inputUpper - inputLower)) * (i - inputLower)))
+    return [output]
+
 class NeuralNetwork:
     def __init__(self, inputnodes, hiddennodes, outputnodes, activationFunction, learningRate):
         self.inputnodes = inputnodes
@@ -77,10 +88,15 @@ class NeuralNetwork:
         print((len(self.weightsHH)+1),". Bias Hidden -> Output")
         print(self.biasHO)
 
-nn = NeuralNetwork(12,[4],2, sigmoid, 0.1)
-input = np.array([[5,10,9,3,12,8,5,10,9,3,12,8]])
+nn = NeuralNetwork(12,[4],2, tanh, 0.1)
+input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
+input = scaler(input[0], 0, 200, -3, 3) # Scale values
 output = nn.forwardPropagation(input[0])
 nn.print()
 
+print("Input")
+print(input)
 print("Output")
 print(output)
+print("Scaled Output")
+print(scaler(output[0], -3, 3, -30, 30))
