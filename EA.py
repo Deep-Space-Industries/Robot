@@ -91,14 +91,14 @@ def rastrigin(genotype):
   return 20 + sigma
 
 # Create population
-n_epochs = 5000
+n_epochs = 2000
 benchmarkFunction = rastrigin
 myPop = Population(100, 60, 1, 3, 30, n_epochs, 0.00001, benchmarkFunction)
 
 # Output
 print("Final population (survivors):")
 for i in myPop.allIndividuals:
-    print("Individual genotype:",i.genotype[0],i.genotype[1], "Fitness:",i.fitness)
+    print("Individual - Genotype:",i.genotype[0],i.genotype[1], "Fitness:",i.fitness)
 
 # Save fitness and diversity of individuals
 maxFitness = []
