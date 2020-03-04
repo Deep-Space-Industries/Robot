@@ -446,6 +446,7 @@ def blit_text(text, x, y, text_color = SILVER, bkg_color = None, font_size = 16)
 def main():
     # player1 = Player(pos=(0, 0))
     # player2 = Player(pos=(0, 0))
+    con = False
     loopExit = True
     screen.blit(pygame.transform.scale(screen, (1000, 1000)), (0, 0))
     try:
@@ -486,8 +487,14 @@ def main():
 
             blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
             # screen.blit(player2.image, player2.rect)
-            block.move()
-            block.draw_direction()
+            for i in range(10):
+                print("Here", i)
+
+                if (True):
+                    continue
+                else:
+                    block.move()
+                    block.draw_direction()
             for w in walls:
                 w.draw()
             block.draw_icc()
