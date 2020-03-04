@@ -10,6 +10,7 @@ import pygame
 import pygame.gfxdraw as gfxdraw
 import numpy as np
 from shapely.geometry import *
+from Leer import *
 
 WHITE = (255, 255, 255)
 GREEN = (20, 255, 140)
@@ -55,6 +56,7 @@ class Robot:
         self.to_collide = []
         self.time_step = 1
         self.sensors = []
+        # self.screen = screen
 
     def draw(self):
         if len(self.history) > 10:
@@ -378,7 +380,7 @@ class Dust:
             return
 
 class Environment:
-    def __init__(self, density = 1):
+    def __init__(self, density = 1, width = 1000, height = 1000):
         self.all_dusts = []
         self.cleared_dust = 0
         if density == 3:
@@ -507,32 +509,3 @@ def main():
         pygame.quit()
     except SystemExit:
         pygame.quit()
-
-
-if __name__ == '__main__':
-    pygame.init()
-    font = pygame.font.SysFont("futura", 16)
-    width = 1000
-    height = 1000
-    clock = pygame.time.Clock()
-    screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
-    walls = []
-    east_border = Wall((width - 5 , 0), (width - 5  , height - 5 ), LIGHTBLUE)
-    west_border = Wall((5 , 5 ), (5 , height - 5 ), LIGHTBLUE)
-    south_border = Wall((5 , height - 5 ), (width - 5 , height - 5 ), LIGHTBLUE)
-    north_border = Wall((5 , 5 ), (width - 5 , 5 ), LIGHTBLUE)
-    walls.append(Wall((250, 250), (750, 250), LIGHTBLUE))
-    walls.append(Wall((750, 250), (750, 750), LIGHTBLUE))
-    walls.append(Wall((750, 750), (250, 750), LIGHTBLUE))
-    walls.append(Wall((250, 750), (250, 250), LIGHTBLUE))
-    # walls.append(Wall((100, 200), (400, 300), LIGHTBLUE))
-    # walls.append(Wall((600, 500), (800, 900), LIGHTBLUE))
-    # walls.append(Wall((300, 500), (300, 750), LIGHTBLUE))
-    # walls.append(Wall((600, 400), (600, 805), LIGHTBLUE))
-    walls.append(east_border)
-    walls.append(west_border)
-    walls.append(south_border)
-    walls.append(north_border)
-    e = Environment(1)
-    block = Robot(220, 290 , 2 , 3 , 20 , walls)
-    main()

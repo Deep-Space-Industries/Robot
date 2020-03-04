@@ -1,19 +1,47 @@
 # Evolutionary Algorithm
 import math
 from NeuralNetwork import *
-from robo import *
-
+import pygame
 n_epochs = 50
-n_epoch_max_duration_ms = 100
+n_epoch_max_duration_ms = 5000
+
+from robo import *
+pygame.init()
+font = pygame.font.SysFont("futura", 16)
 
 class Individual:
     def __init__(self, benchmarkFunction):
         self.benchmarkFunction = benchmarkFunction
         self.nn = NeuralNetwork(12,[4,3],2, tanh, 0.1)
-        input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
-        input = scaler(input[0], 0, 200, -3, 3) # Scale values
-        self.position = self.nn.forwardPropagation(input[0])[0]
-        self.fitness = self.benchmarkFunction(self.position)
+        self.robot = Robot(random.randint(200, 500), random.randint(200, 500), \
+                           0, 0, 20, walls)
+        self.robot.draw()
+        self.robot.draw_sensors()
+        sensors = self.robot.get_sensors()
+        input = np.array([sensors])
+        #input = np.array([sensors])
+        # input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
+        input = scalerr(input[0], 0, 200, -3, 3) # Scale values
+        self.position = self.nn.forwardPropagation(input[0])  # velocities
+        self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
+        self.robot.update_velocities(self.position[0], self.position[1])
+        self.robot.update_icc()
+        self.environment = Environment(density = 1)
+        # self.fitness = self.benchmarkFunction(self.position)
+        self.fitness = self.environment.cleared_dust
+
+    def update_individual(self):
+        sensors = self.robot.get_sensors()
+        input = np.array([sensors])
+        input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
+        self.position = self.nn.forwardPropagation(input[0])  # velocities
+        self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
+        print("before", [self.robot.left_velocity, self.robot.right_velocity])
+        self.robot.update_velocities(self.position[0], self.position[1])
+        self.robot.update_icc()
+        print("after", [self.robot.left_velocity, self.robot.right_velocity])
+        self.fitness = self.robot.environment.cleared_dust
+
 
 class Population:
     def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation, benchmarkFunction):
@@ -62,13 +90,13 @@ def mutate(offspring):
 
 def updateEpoch(population):
     population.history.append([k.position for k in population.individuals])
-    population.individuals.sort(key=lambda x: x.fitness, reverse=False)
+    population.individuals.sort(key=lambda x: x.fitness, reverse=True)
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
     population.offsprings = pair(population.bestIndividuals, 0, 0, "else", population.benchmarkFunction)
     for o in range(len(population.offsprings)):
         population.offsprings[o].fitness = population.benchmarkFunction(population.offsprings[o].position)
     population.allIndividuals = population.individuals + population.offsprings
-    population.allIndividuals.sort(key=lambda x: x.fitness, reverse=False)
+    population.allIndividuals.sort(key=lambda x: x.fitness, reverse=True)
     population.allIndividuals = population.allIndividuals[:-population.n_kill]
     population.individuals = population.allIndividuals
     population.scale -= population.decreaseFactorMutation
@@ -86,15 +114,13 @@ benchmarkFunction = rastrigin
 population = Population(10, 6, 1, 3, 3, n_epochs, 0.25, 0.00001, benchmarkFunction)
 
 # Simulator
-import pygame
+# from OneFileSolution import *
 
 def condition():
     return False
 def reset():
     return False
 
-pygame.init()
-screen = pygame.display.set_mode((400, 300))
 done = False
 x = 30
 y = 30
@@ -117,13 +143,42 @@ while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                done = True
 
-    screen.fill((0, 0, 0))
-    x += 1
-    pygame.draw.rect(screen, (0, 128, 255), pygame.Rect(x, y, 60, 60))
+    screen.fill(BLACK)
+    # print(block.theta)
+    # player1.update(block.x, block.y, block.theta, block.radius, 20)
+    # player2.update(block.x, block.y, block.theta, block.radius, 0)
+    screen.fill((255, 128, 128))
+    for w in walls:
+        w.draw()
 
-    pygame.display.flip()
-    clock.tick(60)
+    for individual in population.individuals:
+    # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
+
+        individual.update_individual()
+        individual.robot.move()
+        individual.environment.draw_dusts(individual.robot)
+        individual.robot.draw_direction()
+        individual.robot.draw_icc()
+        individual.robot.draw_sensors()
+        # e.draw_dusts(block)
+
+    # pygame.display.flip()
+    clock.tick(120)
+    pygame.display.update()
+    #screen.fill((0, 0, 0))
+    #x += 1
+    #pygame.draw.rect(screen, (0, 128, 255), pygame.Rect(x, y, 60, 60))
+
+    #pygame.display.flip()
+    #clock.tick(60)
+
+
+
+
 
 # Output
 # n_epochs = 50

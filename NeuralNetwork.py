@@ -17,7 +17,7 @@ def tanh(x):
     return (np.exp(x)-np.exp(-x))/(np.exp(x)+np.exp(-x))
 
 # Scale a set of values in a specific range of ranges
-def scaler(input, inputLower, inputUpper, outputLower, outputUpper):
+def scalerr(input, inputLower, inputUpper, outputLower, outputUpper):
     output = []
     for i in input:
         output.append((outputLower + ((outputUpper - outputLower) / (inputUpper - inputLower)) * (i - inputLower)))

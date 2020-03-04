@@ -58,7 +58,7 @@ class Robot:
         self.sensors = []
         self.environment = Environment(1)
 
-    def update_velocities(self, left, right):
+    def reset_velocities(self, left, right):
         self.left_velocity = left
         self.right_velocity = right
 
@@ -234,16 +234,19 @@ class Robot:
         #
         if (not sColliding and not rColliding) or (sColliding and not rColliding):
             self.x, self.y, self.theta = self.update_pos()
+            print(self.x, self.y)
             self.draw()
             return
         elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide()
+            print(self.x, self.y)
             self.color = GREY
             self.update_icc()
             self.draw()
             return
         elif (sColliding and rColliding):
             self.theta += self.omega
+            print(self.x, self.y)
             self.color = BLACK
             self.update_icc()
             self.draw()
@@ -424,15 +427,14 @@ class Environment:
                 for h in range(8, height - 8, interval):
                     self.all_dusts.append(Dust(w, h))
 
-    def draw_dusts(self, robot, draw = False):
+    def draw_dusts(self, robot):
         for d in self.all_dusts:
             if d.collected: continue
             dist = np.sqrt((d.x - robot.x) ** 2 + (d.y - robot.y) ** 2)
             if dist <= robot.radius:
                 self.cleared_dust += 1
                 d.clear()
-            if draw:
-                d.draw()
+            d.draw()
 
 
 class Player(pygame.sprite.Sprite):
