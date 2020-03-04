@@ -56,6 +56,31 @@ class Robot:
         self.time_step = 1
         self.sensors = []
 
+    def re_initiazlie(self):
+        self.x = 220
+        self.y = 290
+        self.radius = 20
+        self.history = []
+        self.color = GREEN
+        self.left_velocity = 2
+        self.right_velocity = 3
+        self.velocity = (self.left_velocity + self.right_velocity) / 2
+        self.theta = 0
+        self.omega = None
+        self.icc_radius = None
+        self.icc_centre_x = None
+        self.icc_centre_y = None
+        self.update_icc()
+        self.time = 0
+        self.decrease_factor = 1
+        self.increase_factor = 1
+        self.walls = walls
+        self.collision = None
+        self.collided_wall = None
+        self.to_collide = []
+        self.time_step = 1
+        self.sensors = []
+
     def draw(self):
         if len(self.history) > 10:
             for i, h in enumerate(self.history[2:-2]):
@@ -204,19 +229,19 @@ class Robot:
         #
         if (not sColliding and not rColliding) or (sColliding and not rColliding):
             self.x, self.y, self.theta = self.update_pos()
-            self.draw()
+            # self.draw()
             return
         elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide()
             self.color = GREY
             self.update_icc()
-            self.draw()
+            # self.draw()
             return
         elif (sColliding and rColliding):
             self.theta += self.omega
             self.color = BLACK
             self.update_icc()
-            self.draw()
+            # self.draw()
             return
         return
 
@@ -225,14 +250,14 @@ class Robot:
         along_wall = None
         d = np.inf
         if len(self.to_collide) == 1:
-            print("1")
+            # print("1")
             along_wall = self.to_collide[0]
         else:
-            print("2")
+            # print("2")
             for w in self.to_collide:
-                print(f"{w.dist}D")
+                # print(f"{w.dist}D")
                 if w.dist < d:
-                    print(f"{w.dist} < {d}")
+                    # print(f"{w.dist} < {d}")
                     d = w.dist
                     along_wall = w
         if x is None:
@@ -243,7 +268,7 @@ class Robot:
         # theta1 = self.collided_wall.angle
         direction = cos(theta1 - theta)
 
-        if -0.005 <= direction <= 0.005 or direction >= 0.995 or direction <= -0.995:
+        if -0.0005 <= direction <= 0.0005 or direction >= 0.9995 or direction <= -0.9995:
             next_x, next_y, next_theta = self.update_pos(x, y, theta, time_step)
             return next_x, next_y, next_theta
 
@@ -272,8 +297,7 @@ class Robot:
             if dist < closest_dist:
                 closest_dist = dist
                 closest_wall = wall
-                if dist < self.radius:
-                    wall.color = GOLD
+                if dist < self.radius + 1:
                     wall.dist = dist
                     self.to_collide.append(wall)
         if not self.to_collide:
@@ -307,6 +331,7 @@ class Robot:
             C2 = wline.intersection(line2).coords
             C3 = wline.intersection(line3).coords
             if (C1 or C2 or C3 or dist2 < self.radius or dist3 < self.radius):
+                wall.color = BLACK
                 return True
                 # colliding_walls.append(wall)
                 # self.collision_num += 1
@@ -378,7 +403,7 @@ class Dust:
             return
 
 class Environment:
-    def __init__(self, density = 2):
+    def __init__(self, density = 1):
         self.all_dusts = []
         self.cleared_dust = 0
         if density == 3:
@@ -396,6 +421,28 @@ class Environment:
             for w in range(8, width - 8, interval):
                 for h in range(8, height - 8, interval):
                     self.all_dusts.append(Dust(w, h))
+
+    def re_initialize(self, density = 1):
+        self.all_dusts = []
+        self.cleared_dust = 0
+        if density == 3:
+            interval = 12
+            for w in range(8, width - 8, interval):
+                for h in range(8, height - 8, interval):
+                    self.all_dusts.append(Dust(w, h))
+        if density == 2:
+            interval = 18
+            for w in range(8, width - 8, interval):
+                for h in range(8, height - 8, interval):
+                    self.all_dusts.append(Dust(w, h))
+        if density == 1:
+            interval = 24
+            for w in range(8, width - 8, interval):
+                for h in range(8, height - 8, interval):
+                    self.all_dusts.append(Dust(w, h))
+
+    def get_collected_dust_num(self):
+        return self.cleared_dust
 
     def draw_dusts(self, robot):
         for d in self.all_dusts:
@@ -477,6 +524,9 @@ def main():
                         block.update_icc()
                     elif event.key == pygame.K_ESCAPE:
                         loopExit = False
+                    elif event.key == pygame.K_r:
+                        block.re_initiazlie()
+                        e.re_initialize()
 
             screen.fill(BLACK)
             # print(block.theta)
@@ -485,8 +535,10 @@ def main():
             screen.fill((255, 128, 128))
 
             blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
+            blit_text(f'{e.get_collected_dust_num()}', 600, 300, SILVER, BLACK)
             # screen.blit(player2.image, player2.rect)
             block.move()
+            block.draw()
             block.draw_direction()
             for w in walls:
                 w.draw()
@@ -501,6 +553,10 @@ def main():
     except SystemExit:
         pygame.quit()
 
+def re_initialize():
+    e = Environment(3)
+    block = Robot(220, 290, 2, 3, 20, walls)
+    # main()
 
 if __name__ == '__main__':
     pygame.init()
@@ -526,6 +582,6 @@ if __name__ == '__main__':
     walls.append(west_border)
     walls.append(south_border)
     walls.append(north_border)
-    e = Environment(3)
+    e = Environment(density = 1)
     block = Robot(220, 290 , 2 , 3 , 20 , walls)
     main()
