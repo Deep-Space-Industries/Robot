@@ -1,6 +1,7 @@
 # Evolutionary Algorithm
 import math
 from NeuralNetwork import *
+from robo import *
 
 n_epochs = 50
 n_epoch_max_duration_ms = 100

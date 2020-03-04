@@ -34,6 +34,7 @@ class Robot:
     def __init__(self, x, y, left_velocity, right_velocity, radius, walls):
         self.x = x
         self.y = y
+        self.reset_position()
         self.radius = radius
         self.history = []
         self.color = GREEN
@@ -55,6 +56,27 @@ class Robot:
         self.to_collide = []
         self.time_step = 1
         self.sensors = []
+
+    def reset_position(self):
+        count = 0
+        while (self.wall_robot()):
+            count += 1
+            self.x = self.x + random.randint(-50, 50)
+            self.y = self.y + random.randint(-50, 50)
+            print(count)
+            if count > 15:
+                break
+        return
+
+    def wall_robot(self):
+        for wall in walls:
+            project = wall.linestring.project(Point((self.x, self.y)))
+            nearest_point = wall.linestring.interpolate(project).coords
+            point2 = Point([nearest_point[0][0], nearest_point[0][1]])
+            # if point2.distance(wall.linestring) > 2:
+            if point2.distance(Point((self.x, self.y))) < 25:
+                return True
+        return False
 
     def re_initiazlie(self):
         self.x = 220
@@ -583,5 +605,5 @@ if __name__ == '__main__':
     walls.append(south_border)
     walls.append(north_border)
     e = Environment(density = 1)
-    block = Robot(220, 290 , 2 , 3 , 20 , walls)
+    block = Robot(random.randint(200, 500), random.randint(200, 500) , 2 , 3 , 20 , walls)
     main()
