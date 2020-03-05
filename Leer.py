@@ -35,7 +35,7 @@ class Individual:
         input = np.array([sensors])
         input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
         self.position = self.nn.forwardPropagation(input[0])  # velocities
-        self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
+        # self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
         print("before", [self.robot.left_velocity, self.robot.right_velocity])
         self.robot.update_velocities(self.position[0], self.position[1])
         self.robot.update_icc()
@@ -160,7 +160,8 @@ while not done:
 
         individual.update_individual()
         individual.robot.move()
-        individual.environment.draw_dusts(individual.robot)
+        print("fitness: ", individual.fitness)
+        individual.robot.environment.draw_dusts(individual.robot)
         individual.robot.draw_direction()
         individual.robot.draw_icc()
         individual.robot.draw_sensors()
