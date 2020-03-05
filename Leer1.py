@@ -47,14 +47,13 @@ class Individual:
         self.robot.update_icc()
         #print("after", [self.robot.left_velocity, self.robot.right_velocity])
         velocity = [self.robot.left_velocity, self.robot.right_velocity]
-        collision = 
-        self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, collision, 0.25, 0.5, 0.25)
+        self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, 0.4, 0.6)
 
-    def fitnessFunction(self, velocity, sensor, dust, collision, w1, w2, w3):
+    def fitnessFunction(self, velocity, sensor, dust, w1, w2):
         averageVelocity = (velocity[0] + velocity[1])/2
         deltaVelocity = abs(velocity[0] - velocity[1])
         maxSensor = max(sensor)
-        return w1*(averageVelocity*(1-math.sqrt(deltaVelocity))*(1-maxSensor))+w2*dust-w3*collision*100
+        return w1*(averageVelocity*(1-math.sqrt(deltaVelocity))*(1-maxSensor))+w2*dust
 
 class Population:
     def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation, benchmarkFunction):
@@ -173,12 +172,12 @@ while not done:
 
         individual.update_individual()
         individual.robot.move()
-        individual.robot.draw()
+        # individual.robot.draw()
         print("fitness: ", individual.fitness)
         # individual.robot.environment.draw_dusts(individual.robot)
-        individual.robot.draw_direction()
-        individual.robot.draw_icc()
-        individual.robot.draw_sensors()
+        # individual.robot.draw_direction()
+        # individual.robot.draw_icc()
+        # individual.robot.draw_sensors()
         # e.draw_dusts(block)
 
     # pygame.display.flip()
