@@ -168,11 +168,16 @@ while not done:
     for w in walls:
         w.draw()
 
+    bestcount = 0
     for individual in population.individuals:
     # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
 
         individual.update_individual()
-        individual.robot.move()
+        if (bestcount < 4):
+            individual.robot.move(RED)
+        else:
+            individual.robot.move()
+        bestcount += 1
         individual.robot.draw()
         print("fitness: ", individual.fitness)
         # individual.robot.environment.draw_dusts(individual.robot)
