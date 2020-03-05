@@ -2,8 +2,8 @@
 import math
 from NeuralNetwork import *
 import pygame
-n_epochs = 100
-n_epoch_max_duration_ms = 5000
+n_epochs = 2000
+n_epoch_max_duration_ms = 10000
 
 from robo import *
 pygame.init()
@@ -13,7 +13,7 @@ class Individual:
     def __init__(self, benchmarkFunction):
         self.benchmarkFunction = benchmarkFunction
         self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
-        self.robot = Robot(random.randint(200, 500), random.randint(200, 500), \
+        self.robot = Robot(random.randint(100, 1000), random.randint(100, 1000), \
                            0, 0, 20, walls)
         self.robot.draw()
         self.robot.draw_sensors()
@@ -23,10 +23,10 @@ class Individual:
         # input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
         input = scalerr(input[0], 0, 200, -3, 3) # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
-        velocities = scalerr(velocities, -30, 30, -3, 3)
+        velocities = scalerr(velocities, -15, 15, -1, 1)
         input[0] = np.append(input[0], velocities)
         self.position = self.nn.forwardPropagation(input[0])  # velocities
-        self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
+        self.position = scalerr(self.position[0], -1, 1, -15, 15)[0]
         self.robot.update_velocities(self.position[0], self.position[1])
         self.robot.update_icc()
         self.environment = Environment(density = 1)
@@ -38,23 +38,23 @@ class Individual:
         input = np.array([sensors])
         input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
-        velocities = scalerr(velocities, -30, 30, -3, 3)
+        velocities = scalerr(velocities, -15, 15, -1, 1)
         input[0] = np.append(input[0], velocities)
         self.position = self.nn.forwardPropagation(input[0])  # velocities
-        self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
+        self.position = scalerr(self.position[0], -1, 1, -15, 15)[0]
         #print("before", [self.robot.left_velocity, self.robot.right_velocity])
         self.robot.update_velocities(self.position[0], self.position[1])
         self.robot.update_icc()
         #print("after", [self.robot.left_velocity, self.robot.right_velocity])
         velocity = [self.robot.left_velocity, self.robot.right_velocity]
-        collision = 1
+        collision = self.robot.collision1
         self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, collision, 0.25, 0.5, 0.25)
 
     def fitnessFunction(self, velocity, sensor, dust, collision, w1, w2, w3):
         averageVelocity = (velocity[0] + velocity[1])/2
         deltaVelocity = abs(velocity[0] - velocity[1])
         maxSensor = max(sensor)
-        return w1*(averageVelocity*(1-math.sqrt(deltaVelocity))*(1-maxSensor))+w2*dust-w3*collision*100
+        return w1*(averageVelocity*(1-math.sqrt(deltaVelocity))*(1-maxSensor))+w2*dust-w3*collision*10
 
 class Population:
     def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation, benchmarkFunction):
@@ -112,7 +112,7 @@ def updateEpoch(population):
     population.allIndividuals.sort(key=lambda x: x.fitness, reverse=True)
     population.allIndividuals = population.allIndividuals[:-population.n_kill]
     population.individuals = population.allIndividuals
-    population.scale -= population.decreaseFactorMutation
+    #population.scale -= population.decreaseFactorMutation
 
 def rastrigin(genotype):
   sigma = 0
@@ -124,7 +124,7 @@ def rosenbrock(genotype):
   return np.square(1 - genotype[0]) + 100 * np.square((genotype[1] - genotype[0] * genotype[0]))
 
 benchmarkFunction = rastrigin
-population = Population(10, 6, 1, 3, 3, n_epochs, 0.25, 0.00001, benchmarkFunction)
+population = Population(30, 18, 1, 3, 9, n_epochs, 0.75, 0.00001, benchmarkFunction)
 
 # Simulator
 # from OneFileSolution import *

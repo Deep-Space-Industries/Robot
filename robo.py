@@ -232,21 +232,20 @@ class Robot:
         rColliding = self.get_positions_new(self.x, self.y, self.theta)
         sColliding = self.get_positions_new(self.x, self.y, self.theta, slide = True)
 
-        #
-        self.collision1 = 0
         if (not sColliding and not rColliding) or (sColliding and not rColliding):
+            self.collision1 = 0
             self.x, self.y, self.theta = self.update_pos()
             return
         elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide()
             self.color = GREY
-            self.collision1 = 1
+            self.collision1 += 1
             self.update_icc()
             return
         elif (sColliding and rColliding):
             self.theta += self.omega
             self.color = BLACK
-            self.collision1 = 1
+            self.collision1 += 1
             self.update_icc()
             return
 
