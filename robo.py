@@ -234,19 +234,16 @@ class Robot:
         #
         if (not sColliding and not rColliding) or (sColliding and not rColliding):
             self.x, self.y, self.theta = self.update_pos()
-            self.draw()
             return
         elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide()
             self.color = GREY
             self.update_icc()
-            self.draw()
             return
         elif (sColliding and rColliding):
             self.theta += self.omega
             self.color = BLACK
             self.update_icc()
-            self.draw()
             return
 
         return
@@ -532,7 +529,9 @@ def main():
 width = 1000
 height = 1000
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
+
+screen = pygame.display.set_mode((300, 300))
+# screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
 walls = []
 east_border = Wall((width - 5 , 0), (width - 5  , height - 5 ), LIGHTBLUE)
 west_border = Wall((5 , 5 ), (5 , height - 5 ), LIGHTBLUE)

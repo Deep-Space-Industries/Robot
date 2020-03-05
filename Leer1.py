@@ -172,12 +172,12 @@ while not done:
 
         individual.update_individual()
         individual.robot.move()
-        individual.robot.draw()
+        # individual.robot.draw()
         print("fitness: ", individual.fitness)
         # individual.robot.environment.draw_dusts(individual.robot)
-        individual.robot.draw_direction()
-        individual.robot.draw_icc()
-        individual.robot.draw_sensors()
+        # individual.robot.draw_direction()
+        # individual.robot.draw_icc()
+        # individual.robot.draw_sensors()
         # e.draw_dusts(block)
 
     # pygame.display.flip()
