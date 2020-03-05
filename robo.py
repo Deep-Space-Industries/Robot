@@ -220,12 +220,12 @@ class Robot:
             new_theta = p[2] + self.omega * timestep
         return [new_x, new_y, new_theta]
 
-    def move(self):
+    def move(self, color = GREEN):
         prev_x, prev_y, prev_theta = self.x, self.y, self.theta
         self.collision = False
         self.collided_wall = None
         self.collision_num = 0
-        self.color = GREEN
+        self.color = color
 
         self.ppdistance_to_each_wall()
 
@@ -233,20 +233,20 @@ class Robot:
         sColliding = self.get_positions_new(self.x, self.y, self.theta, slide = True)
 
         #
-        self.collision1 = 0
         if (not sColliding and not rColliding) or (sColliding and not rColliding):
             self.x, self.y, self.theta = self.update_pos()
+            self.collision1 = 0
             return
         elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide()
             self.color = GREY
-            self.collision1 = 1
+            self.collision1 += 1
             self.update_icc()
             return
         elif (sColliding and rColliding):
             self.theta += self.omega
             self.color = BLACK
-            self.collision1 = 1
+            self.collision1 += 1
             self.update_icc()
             return
 
@@ -534,8 +534,8 @@ width = 1000
 height = 1000
 clock = pygame.time.Clock()
 
-#screen = pygame.display.set_mode((300, 300))
-screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
+screen = pygame.display.set_mode((300, 300))
+# screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
 walls = []
 east_border = Wall((width - 5 , 0), (width - 5  , height - 5 ), LIGHTBLUE)
 west_border = Wall((5 , 5 ), (5 , height - 5 ), LIGHTBLUE)
