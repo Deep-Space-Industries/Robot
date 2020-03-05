@@ -2,7 +2,7 @@
 import math
 from NeuralNetwork import *
 import pygame
-n_epochs = 50
+n_epochs = 100
 n_epoch_max_duration_ms = 5000
 
 from robo import *
@@ -12,7 +12,7 @@ font = pygame.font.SysFont("futura", 16)
 class Individual:
     def __init__(self, benchmarkFunction):
         self.benchmarkFunction = benchmarkFunction
-        self.nn = NeuralNetwork(12,[4,3],2, tanh, 0.1)
+        self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
         self.robot = Robot(random.randint(200, 500), random.randint(200, 500), \
                            0, 0, 20, walls)
         self.robot.draw()
@@ -22,6 +22,9 @@ class Individual:
         #input = np.array([sensors])
         # input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
         input = scalerr(input[0], 0, 200, -3, 3) # Scale values
+        velocities = [self.robot.left_velocity, self.robot.right_velocity]
+        velocities = scalerr(velocities, -30, 30, -3, 3)
+        input[0] = np.append(input[0], velocities)
         self.position = self.nn.forwardPropagation(input[0])  # velocities
         self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
         self.robot.update_velocities(self.position[0], self.position[1])
@@ -34,14 +37,23 @@ class Individual:
         sensors = self.robot.get_sensors()
         input = np.array([sensors])
         input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
+        velocities = [self.robot.left_velocity, self.robot.right_velocity]
+        velocities = scalerr(velocities, -30, 30, -3, 3)
+        input[0] = np.append(input[0], velocities)
         self.position = self.nn.forwardPropagation(input[0])  # velocities
-        # self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
-        print("before", [self.robot.left_velocity, self.robot.right_velocity])
+        self.position = scalerr(self.position[0], -3, 3, -30, 30)[0]
+        #print("before", [self.robot.left_velocity, self.robot.right_velocity])
         self.robot.update_velocities(self.position[0], self.position[1])
         self.robot.update_icc()
-        print("after", [self.robot.left_velocity, self.robot.right_velocity])
-        self.fitness = self.robot.environment.cleared_dust
+        #print("after", [self.robot.left_velocity, self.robot.right_velocity])
+        velocity = [self.robot.left_velocity, self.robot.right_velocity]
+        self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, 0.4, 0.6)
 
+    def fitnessFunction(self, velocity, sensor, dust, w1, w2):
+        averageVelocity = (velocity[0] + velocity[1])/2
+        deltaVelocity = abs(velocity[0] - velocity[1])
+        maxSensor = max(sensor)
+        return w1*(averageVelocity*(1-math.sqrt(deltaVelocity))*(1-maxSensor))+w2*dust
 
 class Population:
     def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation, benchmarkFunction):
@@ -89,7 +101,7 @@ def mutate(offspring):
     return offspring.nn
 
 def updateEpoch(population):
-    population.history.append([k.position for k in population.individuals])
+    population.history.append([k.fitness for k in population.individuals])
     population.individuals.sort(key=lambda x: x.fitness, reverse=True)
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
     population.offsprings = pair(population.bestIndividuals, 0, 0, "else", population.benchmarkFunction)
@@ -147,11 +159,11 @@ while not done:
             if event.key == pygame.K_ESCAPE:
                 done = True
 
-    screen.fill(BLACK)
     # print(block.theta)
     # player1.update(block.x, block.y, block.theta, block.radius, 20)
     # player2.update(block.x, block.y, block.theta, block.radius, 0)
     screen.fill((255, 128, 128))
+    blit_text(f"Epoch:{n_epochs}", 100, 100, BLACK, None, 20)
     for w in walls:
         w.draw()
 
@@ -178,8 +190,8 @@ while not done:
     #clock.tick(60)
 
 
-
-
+for i in range(len(population.allIndividuals)):
+    print("Epoch", (i+1), "Final fitness", population.history[i])
 
 # Output
 # n_epochs = 50
