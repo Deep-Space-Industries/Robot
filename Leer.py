@@ -47,7 +47,7 @@ class Individual:
         self.robot.update_icc()
         #print("after", [self.robot.left_velocity, self.robot.right_velocity])
         velocity = [self.robot.left_velocity, self.robot.right_velocity]
-        collision = 
+        collision = 1
         self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, collision, 0.25, 0.5, 0.25)
 
     def fitnessFunction(self, velocity, sensor, dust, collision, w1, w2, w3):

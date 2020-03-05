@@ -530,8 +530,8 @@ width = 1000
 height = 1000
 clock = pygame.time.Clock()
 
-screen = pygame.display.set_mode((300, 300))
-# screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
+#screen = pygame.display.set_mode((300, 300))
+screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
 walls = []
 east_border = Wall((width - 5 , 0), (width - 5  , height - 5 ), LIGHTBLUE)
 west_border = Wall((5 , 5 ), (5 , height - 5 ), LIGHTBLUE)
