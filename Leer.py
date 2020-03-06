@@ -165,6 +165,7 @@ while not done:
     # player2.update(block.x, block.y, block.theta, block.radius, 0)
     screen.fill((255, 128, 128))
     blit_text(f"Epoch:{n_epochs}", 100, 100, BLACK, None, 20)
+    grid.draw_grid()
     for w in walls:
         w.draw()
 
@@ -183,19 +184,12 @@ while not done:
         # individual.robot.environment.draw_dusts(individual.robot)
         individual.robot.draw_direction()
         individual.robot.draw_icc()
-        individual.robot.draw_sensors()
+        individual.robot.draw_sensors(display = False)
         # e.draw_dusts(block)
 
-    # pygame.display.flip()
-    clock.tick(120)
-    pygame.display.update()
-    #screen.fill((0, 0, 0))
-    #x += 1
-    #pygame.draw.rect(screen, (0, 128, 255), pygame.Rect(x, y, 60, 60))
-
-    #pygame.display.flip()
-    #clock.tick(60)
-
+    pygame.display.flip()
+    clock.tick(600)
+    # pygame.display.update()
 
 for i in range(len(population.history())):
     print("Epoch", (i+1), "Final fitness", population.history[i])

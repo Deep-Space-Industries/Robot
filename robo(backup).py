@@ -21,6 +21,7 @@ BLUE = (0, 0, 255)
 GOLD = (255,215,0)
 SILVER = (192, 192, 192)
 LIGHTBLUE = (135,206,250)
+VERDE = (71,243,52)
 
 scaler = 10
 PI = np.pi
@@ -57,8 +58,9 @@ class Robot:
         self.time_step = 1
         self.sensors = []
         self.environment = Environment(1)
+        self.collision1 = 0 # for the fitness
 
-    def reset_velocities(self, left, right):
+    def update_velocities(self, left, right):
         self.left_velocity = left
         self.right_velocity = right
 
@@ -89,7 +91,7 @@ class Robot:
     def draw(self):
         if len(self.history) > 10:
             for i, h in enumerate(self.history[2:-2]):
-                pygame.draw.line(screen, BLACK, self.history[i], self.history[i+1], 3)
+                pygame.draw.line(screen, self.color, self.history[i], self.history[i+1], 3)
 
         gfxdraw.aacircle(screen, int(round(self.x)), int(round(self.y)), self.radius, self.color)
         gfxdraw.filled_circle(screen, int(round(self.x)), int(round(self.y)), self.radius, self.color)
@@ -101,12 +103,13 @@ class Robot:
                                        self.y + self.radius * sin(self.theta + angle * PI / 180)]))
             angle = angle + 30
 
-    def draw_sensors(self):
+    def draw_sensors(self, display = True):
         circle_centre = Point((self.x, self.y))
         for sensor in self.sensors:
             sensor_point = Point((sensor.x, sensor.y))
             sensor.to = None
-            # pygame.draw.circle(screen, BLUE, (int(round(sensor.x)),int(round(sensor.y))), 2)
+            if display:
+                pygame.draw.circle(screen, BLUE, (int(round(sensor.x)),int(round(sensor.y))), 2)
             sensor_distance = np.inf
             for wall in walls:
                 px, py = sensor.line_line_intersection(self.x, self.y, wall)
@@ -121,19 +124,22 @@ class Robot:
                     sensor.to = sensor_reach
                     sensor.dist_to_wall = round(sensor_to_wall, 2)
             if (sensor.to is None):
-                # blit_text("> 200", sensor.x, sensor.y, BLACK, None, 12)
+                if display:
+                    blit_text("> 200", sensor.x, sensor.y, BLACK, None, 12)
                 sensor.value = 200
                 continue
             line_from_sensor_to_wall = LineString((sensor_point, sensor.to))
             centre_on_the_line = line_from_sensor_to_wall.distance(circle_centre)
             if centre_on_the_line <= 2:
-                # blit_text("> 200", sensor.x, sensor.y, BLACK, None, 12)
+                if display:
+                    blit_text("> 200", sensor.x, sensor.y, BLACK, None, 12)
                 sensor.value = 200
                 continue
-            # pygame.draw.line(screen, SILVER, \
-            #                  (int(round(sensor.x)), int(round(sensor.y))), \
-            #                  (int(round(sensor.to.xy[0][0])), int(round(sensor.to.xy[1][0]))), 2)
-            # blit_text(f"{sensor.dist_to_wall}", sensor.to.xy[0][0], sensor.to.xy[1][0], BLACK, SILVER, 12)
+            if display:
+                pygame.draw.line(screen, SILVER, \
+                                 (int(round(sensor.x)), int(round(sensor.y))), \
+                                 (int(round(sensor.to.xy[0][0])), int(round(sensor.to.xy[1][0]))), 2)
+                blit_text(f"{sensor.dist_to_wall}", sensor.to.xy[0][0], sensor.to.xy[1][0], BLACK, SILVER, 12)
             sensor.value = sensor.dist_to_wall
         # print([x.value for x in self.sensors])
         return
@@ -195,6 +201,48 @@ class Robot:
             self.time_step = 1
         self.time_step = 1/1
 
+    def move(self, color = GREEN):
+        prev_x, prev_y, prev_theta = self.x, self.y, self.theta
+        self.collision = False
+        self.collision_num = 0
+        self.color = color
+
+        self.ppdistance_to_each_wall()
+        blit_text(f"{len(self.to_collide)}", 500, 900, BLACK, None, 20)
+        rColliding = self.get_positions_new(self.x, self.y, self.theta)
+        sColliding = self.get_positions_new(self.x, self.y, self.theta, slide = True)
+        self.radius = 20
+
+        if (not sColliding and not rColliding) or (sColliding and not rColliding):
+            self.x, self.y, self.theta = self.update_pos()
+            self.collision1 = 0
+            return
+
+        elif (rColliding and not sColliding):
+            self.x, self.y, self.theta = self.slide()
+            self.color = GREY if color is GREEN else color
+            self.collision1 += 1
+            self.update_icc()
+            return
+
+        elif (sColliding and rColliding):
+            self.theta += self.omega
+            # self.stop_both()
+            # cx, cy, ctheta = self.update_pos()
+            # cx1, cy1, ctheta1 = self.slide()
+            # gfxdraw.aacircle(screen, int(round(cx)), int(round(cy)), 20, VERDE)
+            # gfxdraw.aacircle(screen, int(round(cx1)), int(round(cy1)), 20, VERDE)
+            # gfxdraw.filled_circle(screen, int(round(cx)), int(round(cy)), 20, WHITE)
+            # gfxdraw.filled_circle(screen, int(round(cx1)), int(round(cy1)), 20, WHITE)
+            # self.radius = 2
+            self.color = BLACK if color is GREEN else color
+            self.collision1 += 1
+            for wall in self.to_collide:
+                wall.color = GOLD
+            self.update_icc()
+            return
+        return
+
     def update_pos(self, x = None, y = None, theta = None, timestep = 1):
         if x is None:
             x = self.x
@@ -203,8 +251,8 @@ class Robot:
             # timestep = self.time_step
 
         if (self.left_velocity == self.right_velocity):
-            new_x = x + timestep * (self.left_velocity * cos(theta))
-            new_y = y + timestep * (self.right_velocity * sin(theta))
+            new_x = x + timestep * (self.velocity * cos(theta))
+            new_y = y + timestep * (self.velocity * sin(theta))
             new_theta = theta + self.omega * timestep
         else:
             p = np.dot(np.array([[cos(self.omega * timestep), -sin(self.omega * timestep), 0],
@@ -219,61 +267,28 @@ class Robot:
             new_theta = p[2] + self.omega * timestep
         return [new_x, new_y, new_theta]
 
-    def move(self):
-        prev_x, prev_y, prev_theta = self.x, self.y, self.theta
-        self.collision = False
-        self.collided_wall = None
-        self.collision_num = 0
-        self.color = GREEN
-
-        self.ppdistance_to_each_wall()
-
-        rColliding = self.get_positions_new(self.x, self.y, self.theta)
-        sColliding = self.get_positions_new(self.x, self.y, self.theta, slide = True)
-
-        #
-        if (not sColliding and not rColliding) or (sColliding and not rColliding):
-            self.x, self.y, self.theta = self.update_pos()
-            print(self.x, self.y)
-            self.draw()
-            return
-        elif (rColliding and not sColliding):
-            self.x, self.y, self.theta = self.slide()
-            print(self.x, self.y)
-            self.color = GREY
-            self.update_icc()
-            self.draw()
-            return
-        elif (sColliding and rColliding):
-            self.theta += self.omega
-            print(self.x, self.y)
-            self.color = BLACK
-            self.update_icc()
-            self.draw()
-            return
-
-        return
-
-
     def slide(self, x = None, y = None, theta = None, time_step = 1):
-        along_wall = None
-        d = np.inf
-        if len(self.to_collide) == 1:
-            along_wall = self.to_collide[0]
-        else:
-            for w in self.to_collide:
-                if w.dist < d:
-                    d = w.dist
-                    along_wall = w
         if x is None:
             x = self.x
             y = self.y
             theta = self.theta
-        theta1 = along_wall.angle
+
+        slide_on_me = None
+        d = np.inf
+        if len(self.to_collide) == 1:
+            slide_on_me = self.to_collide[0]
+        else:
+            for w in self.to_collide:
+                if w.dist < d:
+                    d = w.dist
+                    slide_on_me = w
+
+        slide_on_me.color = GOLD
+        theta1 = slide_on_me.angle
         # theta1 = self.collided_wall.angle
         direction = cos(theta1 - theta)
 
-        if -0.005 <= direction <= 0.005 or direction >= 0.995 or direction <= -0.995:
+        if (-0.0005 <= direction <= 0.0005 or direction >= 0.9995 or direction <= -0.9995) and len(self.to_collide) == 1:
             next_x, next_y, next_theta = self.update_pos(x, y, theta, time_step)
             return next_x, next_y, next_theta
 
@@ -295,19 +310,20 @@ class Robot:
             project = wall.linestring.project(point)
             nearest_point = wall.linestring.interpolate(project).coords
             point2 = Point([nearest_point[0][0], nearest_point[0][1]])
-            if point2.distance(wall.linestring) > 2:
+            if point2.distance(wall.linestring) > 0.5:
                 continue
             # pygame.draw.circle(screen, BLACK, (int(round(point2.xy[0][0])), int(round(point2.xy[1][0]))), 6)
             dist = point.distance(point2)
+
             if dist < closest_dist:
                 closest_dist = dist
                 closest_wall = wall
-                if dist < self.radius:
-                    wall.color = GOLD
+                if dist < self.radius + 2:
                     wall.dist = dist
                     self.to_collide.append(wall)
         if not self.to_collide:
             self.to_collide.append(closest_wall)
+        return
 
     def get_positions_new(self, startx, starty, start_theta, slide = False, steps = 2):
         time_step = 1 / steps
@@ -338,15 +354,6 @@ class Robot:
             C3 = wline.intersection(line3).coords
             if (C1 or C2 or C3 or dist2 < self.radius or dist3 < self.radius):
                 return True
-                # colliding_walls.append(wall)
-                # self.collision_num += 1
-                # dist2s.append(dist2)
-        # if colliding_walls:
-        #     print(len(colliding_walls))
-        #     j = dist2s.index(min(dist2s))
-        #     self.collided_wall = colliding_walls[j]
-        #     self.collided_wall.color = GOLD
-        #     return True
         return False
 
 class Wall:
@@ -383,11 +390,10 @@ class Sensor():
         x4, y4 = wall.end_point[0], wall.end_point[1]
 
         self.Px = ( ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / \
-               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) )
+               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) + 0.0000000001)
         self.Py = ( ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / \
-               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) )
+               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) + 0.0000000001)
         return self.Px, self.Py
-
 
 class Dust:
     def __init__(self, x, y):
@@ -427,15 +433,15 @@ class Environment:
                 for h in range(8, height - 8, interval):
                     self.all_dusts.append(Dust(w, h))
 
-    def draw_dusts(self, robot):
+    def draw_dusts(self, robot, draw = False):
         for d in self.all_dusts:
             if d.collected: continue
             dist = np.sqrt((d.x - robot.x) ** 2 + (d.y - robot.y) ** 2)
             if dist <= robot.radius:
                 self.cleared_dust += 1
                 d.clear()
-            d.draw()
-
+            if draw:
+                d.draw()
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos, size=(200, 200)):
@@ -461,6 +467,23 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()  # Replace old rect with new rect.
         self.rect.center = (x2, y2)  # Put the new rect's center at old center.
 
+class Grid():
+    def __init__(self, surface, cell_size):
+        self.surface = surface
+        self.col = surface.get_width() // cell_size
+        self.line = surface.get_height() // cell_size
+        self.cell_size = cell_size
+        self.grid = [[0 for i in range(self.col)] for j in range(self.line)]
+
+    def draw_grid(self):
+        for l in range(self.line):
+            liCoord = 5 + l * self.cell_size
+            pygame.draw.line(self.surface, SILVER, (5, liCoord),
+                             (self.surface.get_width(), liCoord))
+        for c in range(self.col):
+            colCoord = 5 + c * self.cell_size
+            pygame.draw.line(self.surface, SILVER, (colCoord, 5),
+                             (colCoord, self.surface.get_height()))
 
 def load_image(name):
     image = pygame.image.load(name)
@@ -508,15 +531,15 @@ def main():
                     elif event.key == pygame.K_ESCAPE:
                         loopExit = False
 
-            screen.fill(BLACK)
             # print(block.theta)
             # player1.update(block.x, block.y, block.theta, block.radius, 20)
             # player2.update(block.x, block.y, block.theta, block.radius, 0)
             screen.fill((255, 128, 128))
-
+            grid.draw_grid()
             # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
             # screen.blit(player2.image, player2.rect)
             block.move()
+            block.draw()
             block.draw_direction()
             for w in walls:
                 w.draw()
@@ -534,6 +557,8 @@ def main():
 width = 1000
 height = 1000
 clock = pygame.time.Clock()
+
+# screen = pygame.display.set_mode((300, 300))
 screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
 walls = []
 east_border = Wall((width - 5 , 0), (width - 5  , height - 5 ), LIGHTBLUE)
@@ -553,33 +578,11 @@ walls.append(west_border)
 walls.append(south_border)
 walls.append(north_border)
 e = Environment(1)
-block = Robot(220, 290 , 2 , 3 , 20 , walls)
-
+block = Robot(520, 690 , 2 , 3 , 20 , walls)
+# block = Robot(220, 290 , 2 , 3 , 20 , walls)
+grid = Grid(screen, cell_size = 100)
 
 if __name__ == '__main__':
     pygame.init()
     font = pygame.font.SysFont("futura", 16)
-    width = 1000
-    height = 1000
-    clock = pygame.time.Clock()
-    screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
-    walls = []
-    east_border = Wall((width - 5 , 0), (width - 5  , height - 5 ), LIGHTBLUE)
-    west_border = Wall((5 , 5 ), (5 , height - 5 ), LIGHTBLUE)
-    south_border = Wall((5 , height - 5 ), (width - 5 , height - 5 ), LIGHTBLUE)
-    north_border = Wall((5 , 5 ), (width - 5 , 5 ), LIGHTBLUE)
-    walls.append(Wall((250, 250), (750, 250), LIGHTBLUE))
-    walls.append(Wall((750, 250), (750, 750), LIGHTBLUE))
-    walls.append(Wall((750, 750), (250, 750), LIGHTBLUE))
-    walls.append(Wall((250, 750), (250, 250), LIGHTBLUE))
-    # walls.append(Wall((100, 200), (400, 300), LIGHTBLUE))
-    # walls.append(Wall((600, 500), (800, 900), LIGHTBLUE))
-    # walls.append(Wall((300, 500), (300, 750), LIGHTBLUE))
-    # walls.append(Wall((600, 400), (600, 805), LIGHTBLUE))
-    walls.append(east_border)
-    walls.append(west_border)
-    walls.append(south_border)
-    walls.append(north_border)
-    e = Environment(1)
-    block = Robot(220, 290 , 2 , 3 , 20 , walls)
     main()
