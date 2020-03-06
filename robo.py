@@ -206,20 +206,20 @@ class Robot:
         self.collision = False
         self.collision_num = 0
         self.color = color
-
+        self.go_half = False
         self.ppdistance_to_each_wall()
-        blit_text(f"{len(self.to_collide)}", 500, 900, BLACK, None, 20)
+        # blit_text(f"{len(self.to_collide)}", 500, 900, BLACK, None, 20)
         rColliding = self.get_positions_new(self.x, self.y, self.theta)
         sColliding = self.get_positions_new(self.x, self.y, self.theta, slide = True)
-        self.radius = 20
+        # blit_text(f"rc: {rColliding}, sc: {sColliding}", 500, 900, BLACK, None, 20)
 
         if (not sColliding and not rColliding) or (sColliding and not rColliding):
-            self.x, self.y, self.theta = self.update_pos()
+            self.x, self.y, self.theta = self.update_pos(time_step = 1)
             self.collision1 = 0
             return
 
         elif (rColliding and not sColliding):
-            self.x, self.y, self.theta = self.slide()
+            self.x, self.y, self.theta = self.slide(time_step = 1)
             self.color = GREY if color is GREEN else color
             self.collision1 += 1
             self.update_icc()
@@ -243,20 +243,22 @@ class Robot:
             return
         return
 
-    def update_pos(self, x = None, y = None, theta = None, timestep = 1):
+    def update_pos(self, x = None, y = None, theta = None, time_step = 1):
         if x is None:
             x = self.x
             y = self.y
             theta = self.theta
-            # timestep = self.time_step
+            time_step = 1 / time_step
+        else:
+            time_step = time_step
 
         if (self.left_velocity == self.right_velocity):
-            new_x = x + timestep * (self.velocity * cos(theta))
-            new_y = y + timestep * (self.velocity * sin(theta))
-            new_theta = theta + self.omega * timestep
+            new_x = x + time_step * (self.velocity * cos(theta))
+            new_y = y + time_step * (self.velocity * sin(theta))
+            new_theta = theta + self.omega * time_step
         else:
-            p = np.dot(np.array([[cos(self.omega * timestep), -sin(self.omega * timestep), 0],
-                                 [sin(self.omega * timestep), cos(self.omega * timestep), 0],
+            p = np.dot(np.array([[cos(self.omega * time_step), -sin(self.omega * time_step), 0],
+                                 [sin(self.omega * time_step), cos(self.omega * time_step), 0],
                                  [0, 0, 1]]), \
                        np.array(
                            [self.icc_radius * sin(theta),
@@ -264,7 +266,7 @@ class Robot:
                             theta]))
             new_x = p[0] + self.icc_centre_x
             new_y = p[1] + self.icc_centre_y
-            new_theta = p[2] + self.omega * timestep
+            new_theta = p[2] + self.omega * time_step
         return [new_x, new_y, new_theta]
 
     def slide(self, x = None, y = None, theta = None, time_step = 1):
@@ -272,7 +274,7 @@ class Robot:
             x = self.x
             y = self.y
             theta = self.theta
-
+            time_step = 1 / time_step
         slide_on_me = None
         d = np.inf
         if len(self.to_collide) == 1:
@@ -287,14 +289,14 @@ class Robot:
         theta1 = slide_on_me.angle
         # theta1 = self.collided_wall.angle
         direction = round(cos(theta1 - theta), 4)
-        blit_text(f"{direction}", 500, 500, BLACK, None, 20)
+        # blit_text(f"{direction}", 500, 500, BLACK, None, 20)
 
         #
         # if (-0.0005 <= direction <= 0.0005 or direction >= 0.9995 or direction <= -0.9995) and len(self.to_collide) == 1:
         #     next_x, next_y, next_theta = self.update_pos(x, y, theta, time_step)
         #     return next_x, next_y, next_theta
 
-        if direction < 0.0:
+        if direction <= 0.0:
             next_x = x + time_step * (self.velocity * - cos(theta1))
             next_y = y + time_step * (self.velocity * - sin(theta1))
         if direction > 0.0:
@@ -316,7 +318,6 @@ class Robot:
                 continue
             # pygame.draw.circle(screen, BLACK, (int(round(point2.xy[0][0])), int(round(point2.xy[1][0]))), 6)
             dist = point.distance(point2)
-
             if dist < closest_dist:
                 closest_dist = dist
                 closest_wall = wall
@@ -325,6 +326,7 @@ class Robot:
                     self.to_collide.append(wall)
         if not self.to_collide:
             self.to_collide.append(closest_wall)
+        # print(f"clo dist: {closest_dist}")
         return
 
     def get_positions_new(self, startx, starty, start_theta, slide = False, steps = 2):
@@ -332,8 +334,6 @@ class Robot:
         new_x, new_y, new_theta = startx, starty, start_theta
         start_point = Point(startx, starty)
         e_points = []
-        colliding_walls = []
-        dist2s = []
         for i in range(steps):
             if not slide:
                 next_step = self.update_pos(new_x, new_y, new_theta, time_step)
@@ -354,7 +354,9 @@ class Robot:
             C1 = wline.intersection(line1).coords
             C2 = wline.intersection(line2).coords
             C3 = wline.intersection(line3).coords
-            if (C1 or C2 or C3 or dist2 < self.radius or dist3 < self.radius):
+            # print([bool(C1), bool(C2), bool(C3), bool(dist2 < self.radius), bool(dist3 < self.radius),
+            #        bool(dist1 < self.radius)])
+            if (C1 or C2 or C3 or dist2 < self.radius or dist3 < self.radius or dist1 < self.radius):
                 return True
         return False
 
@@ -392,9 +394,9 @@ class Sensor():
         x4, y4 = wall.end_point[0], wall.end_point[1]
 
         self.Px = ( ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) / \
-               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) + 0.0000000001)
+               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) )
         self.Py = ( ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) / \
-               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) + 0.0000000001)
+               ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)) )
         return self.Px, self.Py
 
 class Dust:

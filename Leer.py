@@ -18,9 +18,8 @@ class Individual:
         self.robot.draw()
         self.robot.draw_sensors()
         sensors = self.robot.get_sensors()
+        sensors = list(map(lambda x : (np.e ** ((-(2 * x - 200)) / 37)), sensors))
         input = np.array([sensors])
-        #input = np.array([sensors])
-        # input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
         input = scalerr(input[0], 0, 200, -3, 3) # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
         velocities = scalerr(velocities, -15, 15, -1, 1)
@@ -35,6 +34,7 @@ class Individual:
 
     def update_individual(self):
         sensors = self.robot.get_sensors()
+        sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)), sensors))
         input = np.array([sensors])
         input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
@@ -54,7 +54,7 @@ class Individual:
         averageVelocity = (velocity[0] + velocity[1])/2
         deltaVelocity = abs(velocity[0] - velocity[1])
         maxSensor = max(sensor)
-        return w1*(averageVelocity*(1-math.sqrt(deltaVelocity))*(1-maxSensor))+w2*dust-w3*collision*10
+        return w1 * ( averageVelocity * (1 - math.sqrt(deltaVelocity) ) * ( 1 - maxSensor )) + w2 * dust - w3 * collision * 5
 
 class Population:
     def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation, benchmarkFunction):
@@ -112,6 +112,7 @@ def updateEpoch(population):
     population.allIndividuals.sort(key=lambda x: x.fitness, reverse=True)
     population.allIndividuals = population.allIndividuals[:-population.n_kill]
     population.individuals = population.allIndividuals
+
     #population.scale -= population.decreaseFactorMutation
 
 def rastrigin(genotype):
@@ -164,12 +165,12 @@ while not done:
     # player1.update(block.x, block.y, block.theta, block.radius, 20)
     # player2.update(block.x, block.y, block.theta, block.radius, 0)
     screen.fill((255, 128, 128))
-    blit_text(f"Epoch:{n_epochs}", 100, 100, BLACK, None, 20)
     grid.draw_grid()
     for w in walls:
         w.draw()
 
     bestcount = 0
+    population.individuals.sort(key=lambda x: x.fitness, reverse=True)
     for individual in population.individuals:
     # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
 
@@ -186,9 +187,10 @@ while not done:
         individual.robot.draw_icc()
         individual.robot.draw_sensors(display = False)
         # e.draw_dusts(block)
+    blit_text(f"Epoch:{n_epochs}", 100, 100, WHITE, BLACK, 36)
 
     pygame.display.flip()
-    clock.tick(600)
+    clock.tick(120)
     # pygame.display.update()
 
 for i in range(len(population.history())):
