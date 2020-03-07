@@ -8,7 +8,7 @@ n_epoch_max_duration_ms = 10000
 from robo import *
 pygame.init()
 font = pygame.font.SysFont("futura", 16)
-
+COLOR_FOR_BEST = [(255,0,0), (109,2,2), (163,24,24), (238,114,114), (255,185,185)]
 class Individual:
     def __init__(self, benchmarkFunction):
         self.benchmarkFunction = benchmarkFunction
@@ -18,9 +18,9 @@ class Individual:
         self.robot.draw()
         self.robot.draw_sensors()
         sensors = self.robot.get_sensors()
-        sensors = list(map(lambda x : (np.e ** ((-(2 * x - 200)) / 37)), sensors))
-        input = np.array([sensors])
-        input = scalerr(input[0], 0, 200, -3, 3) # Scale values
+        sensors = list(map(lambda x : (np.e ** ((-(2 * x - 200)) / 37)) / 10, sensors))
+        input = [np.array([sensors])]
+        ## input = scalerr(input[0], 0, 200, -3, 3) # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
         velocities = scalerr(velocities, -15, 15, -1, 1)
         input[0] = np.append(input[0], velocities)
@@ -34,9 +34,9 @@ class Individual:
 
     def update_individual(self):
         sensors = self.robot.get_sensors()
-        sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)), sensors))
-        input = np.array([sensors])
-        input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
+        sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)) / 10, sensors))
+        input = [np.array([sensors])]
+        ## input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
         velocities = scalerr(velocities, -15, 15, -1, 1)
         input[0] = np.append(input[0], velocities)
@@ -102,8 +102,8 @@ def mutate(offspring):
     return offspring.nn
 
 def updateEpoch(population):
-    population.history.append([k.fitness for k in population.individuals])
     population.individuals.sort(key=lambda x: x.fitness, reverse=True)
+    population.history.append([k.fitness for k in population.individuals])
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
     population.offsprings = pair(population.bestIndividuals, 0, 0, "else", population.benchmarkFunction)
     for o in range(len(population.offsprings)):
@@ -168,7 +168,6 @@ while not done:
     grid.draw_grid()
     for w in walls:
         w.draw()
-
     bestcount = 0
     population.individuals.sort(key=lambda x: x.fitness, reverse=True)
     for individual in population.individuals:
@@ -176,7 +175,7 @@ while not done:
 
         individual.update_individual()
         if (bestcount < 4):
-            individual.robot.move(RED)
+            individual.robot.move(COLOR_FOR_BEST[i])
         else:
             individual.robot.move()
         bestcount += 1
@@ -193,7 +192,7 @@ while not done:
     clock.tick(120)
     # pygame.display.update()
 
-for i in range(len(population.history())):
+for i in range(len(population.history)):
     print("Epoch", (i+1), "Final fitness", population.history[i])
 
 # Output

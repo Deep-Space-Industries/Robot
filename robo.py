@@ -93,8 +93,7 @@ class Robot:
             for i, h in enumerate(self.history[2:-2]):
                 pygame.draw.line(screen, self.color, self.history[i], self.history[i+1], 3)
 
-        gfxdraw.aacircle(screen, int(round(self.x)), int(round(self.y)), self.radius, self.color)
-        gfxdraw.filled_circle(screen, int(round(self.x)), int(round(self.y)), self.radius, self.color)
+        pygame.draw.circle(screen, self.color, (int(round(self.x)), int(round(self.y))), self.radius)
         self.history.append([int(round(self.x)), int(round(self.y))])
         angle = 0
         self.sensors = []
@@ -299,7 +298,7 @@ class Robot:
         if direction <= 0.0:
             next_x = x + time_step * (self.velocity * - cos(theta1))
             next_y = y + time_step * (self.velocity * - sin(theta1))
-        if direction > 0.0:
+        else:
             next_x = x + time_step * (self.velocity * cos(theta1))
             next_y = y + time_step * (self.velocity * sin(theta1))
         next_theta = theta + self.omega * time_step
@@ -351,9 +350,10 @@ class Robot:
             dist1 = start_point.distance(wline)
             dist2 = e_points[1].distance(wline)
             dist3 = e_points[0].distance(wline)
-            C1 = wline.intersection(line1).coords
-            C2 = wline.intersection(line2).coords
-            C3 = wline.intersection(line3).coords
+            # C1 = wline.intersection(line1).coords
+            # C2 = wline.intersection(line2).coords
+            # C3 = wline.intersection(line3).coords
+            C1 = C2 = C3 = []
             # print([bool(C1), bool(C2), bool(C3), bool(dist2 < self.radius), bool(dist3 < self.radius),
             #        bool(dist1 < self.radius)])
             if (C1 or C2 or C3 or dist2 < self.radius or dist3 < self.radius or dist1 < self.radius):
