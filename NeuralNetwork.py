@@ -88,9 +88,9 @@ class NeuralNetwork:
         print((len(self.weightsHH)+1),". Bias Hidden -> Output")
         print(self.biasHO)
 
-#nn = NeuralNetwork(12,[4],2, tanh, 0.1)
+#nn = NeuralNetwork(12,[4,4],2,tanh,0.1)
 #input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
-#input = scaler(input[0], 0, 200, -3, 3) # Scale values
+#input = scalerr(input[0], 0, 200, -3, 3) # Scale values
 #output = nn.forwardPropagation(input[0])
 #nn.print()
 
@@ -99,4 +99,4 @@ class NeuralNetwork:
 #print("Output")
 #print(output)
 #print("Scaled Output")
-#print(scaler(output[0], -3, 3, -30, 30))
+#print(scalerr(output[0], -1, 1, -15, 15))

@@ -1,27 +1,28 @@
 # Evolutionary Algorithm
 import math
 from NeuralNetwork import *
+import sklearn.preprocessing as preprocessing
 import pygame
-n_epochs = 1000
-n_epoch_max_duration_ms = 20000
-#sensormax = 500
+n_epochs = 2000
+n_epoch_max_duration_ms = 10000
 
 from robo import *
 pygame.init()
 font = pygame.font.SysFont("futura", 16)
-COLOR_FOR_BEST = [(255,0,10), (0,255,128), (0,0,255), (238,114,114), (255,185,185)]
+
 class Individual:
-    def __init__(self):
-        # self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
-        self.nn = NeuralNetwork(14,[3,2],2, tanh, 0.1)
-        self.robot = Robot(random.randint(50, 200), random.randint(50, 200), \
+    def __init__(self, benchmarkFunction):
+        self.benchmarkFunction = benchmarkFunction
+        self.nn = NeuralNetwork(14,[6,6],2, tanh, 0.1)
+        self.robot = Robot(random.randint(100, 1000), random.randint(100, 1000), \
                            0, 0, 20, walls)
         self.robot.draw()
         self.robot.draw_sensors()
         sensors = self.robot.get_sensors()
-        sensors = list(map(lambda x : (np.e ** ((-(2 * x - 200)) / 37)) / 10, sensors))
-        input = [np.array([sensors])]
-        ## input = scalerr(input[0], 0, 200, -3, 3) # Scale values
+        input = np.array([sensors])
+        #input = np.array([sensors])
+        # input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
+        input = scalerr(input[0], 0, 200, -3, 3) # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
         velocities = scalerr(velocities, -15, 15, -1, 1)
         input[0] = np.append(input[0], velocities)
@@ -30,22 +31,23 @@ class Individual:
         self.robot.update_velocities(self.position[0], self.position[1])
         self.robot.update_icc()
         self.environment = Environment(density = 1)
-        self.fitness = self.environment.cleared_dust
+        # self.fitness = self.benchmarkFunction(self.position)
+        velocity = [self.robot.left_velocity, self.robot.right_velocity]
+        collision = self.robot.collision1
+        self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, collision, 0.25, 0.5, 0.25)
+
 
     def update_individual(self):
         sensors = self.robot.get_sensors()
-        sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)) / 10, sensors))
-        input = [np.array([sensors])]
-        ## input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
+        input = np.array([sensors])
+        input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
         velocities = scalerr(velocities, -15, 15, -1, 1)
         input[0] = np.append(input[0], velocities)
         self.position = self.nn.forwardPropagation(input[0])  # velocities
-        # print(self.position)
         self.position = scalerr(self.position[0], -1, 1, -15, 15)[0]
         #print("before", [self.robot.left_velocity, self.robot.right_velocity])
-
-        self.robot.update_velocities(round(self.position[0], 4), round(self.position[1], 4))
+        self.robot.update_velocities(self.position[0], self.position[1])
         self.robot.update_icc()
         #print("after", [self.robot.left_velocity, self.robot.right_velocity])
         velocity = [self.robot.left_velocity, self.robot.right_velocity]
@@ -53,16 +55,24 @@ class Individual:
         self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, collision, 0.25, 0.5, 0.25)
 
     def fitnessFunction(self, velocity, sensor, dust, collision, w1, w2, w3):
-        vels = scalerr([velocity[0], velocity[1]], -15, 15, 0, 1)[0]
-        averageVelocity = (vels[0] + vels[1]) / 2
+        vels = scalerr([velocity[0],velocity[1]], -15, 15, -1, 1)[0]
+        #print("Vels", vels)
+        print("L", velocity[0])
+        print("R", velocity[1])
+        averageVelocity = (vels[0] + vels[1])/2
         deltaVelocity = abs(vels[0] - vels[1])
-        maxSensor = max(sensor) / 200
-        minSensor = min(sensor)
-
-        return w1 * ( averageVelocity * (1 - math.sqrt(deltaVelocity) ) * ( 1 - maxSensor )) + w2 * dust - w3 * collision * 5 - minSensor*50
+        maxSensor = min(sensor)/200
+        vel = w1*(averageVelocity*(1-math.sqrt(deltaVelocity))*(1-maxSensor))
+        dus = w2*dust
+        coll = w3*collision
+        print("Vel", vel)
+        print("Dust", dus)
+        print("Collected Dust", dust)
+        print("Coll", coll)
+        return vel+dus-coll
 
 class Population:
-    def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation):
+    def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation, benchmarkFunction):
         self.n_individuals = n_individuals
         self.n_bestIndividuals = n_bestIndividuals
         self.n_offsprings = n_offsprings
@@ -71,34 +81,26 @@ class Population:
         self.n_epochs = n_epochs
         self.scale = scale
         self.decreaseFactorMutation = decreaseFactorMutation
+        self.benchmarkFunction = benchmarkFunction
 
-        self.individuals = [Individual() for i in range(n_individuals)]
+        self.individuals = [Individual(self.benchmarkFunction) for i in range(n_individuals)]
         self.history = []
-
-        self.historyWeightsIH = []
-        self.historyBiasIHH1 = []
-        self.historyWeightsHH = []
-        self.historyBiasIHHn = []
-        self.historyWeightsHO = []
-        self.historyBiasHO = []
-
         self.bestIndividuals = None
         self.allIndividuals = None
         self.offsprings = None
 
 # Create n new offsprings by m number of individuals
-def pair(bestIndividuals, n_offsprings, m_parents, method):
+def pair(bestIndividuals, n_offsprings, m_parents, method, benchmarkFunction):
     if (method == "random"):
         random.shuffle(bestIndividuals)
     offsprings = []
     for i in range(len(bestIndividuals))[::2]:
-        newOffspring = Individual()
+        newOffspring = Individual(benchmarkFunction)
         # Genes of parents being passed as average value
         newOffspring.nn.weightsIH=(bestIndividuals[i].nn.weightsIH+bestIndividuals[i+1].nn.weightsIH)/2
         newOffspring.nn.biasIHH[0]=(bestIndividuals[i].nn.biasIHH[0]+bestIndividuals[i+1].nn.biasIHH[0])/2
-        for l in range(len(newOffspring.nn.weightsHH)):
-            newOffspring.nn.weightsHH[l] = (bestIndividuals[i].nn.weightsHH[l] + bestIndividuals[i + 1].nn.weightsHH[l]) / 2
-            newOffspring.nn.biasIHH[l+1] = (bestIndividuals[i].nn.biasIHH[l+1] + bestIndividuals[i + 1].nn.biasIHH[l+1]) / 2
+        newOffspring.nn.weightsHH[0] = (bestIndividuals[i].nn.weightsHH[0] + bestIndividuals[i + 1].nn.weightsHH[0]) / 2
+        newOffspring.nn.biasIHH[1] = (bestIndividuals[i].nn.biasIHH[1] + bestIndividuals[i + 1].nn.biasIHH[1]) / 2
         newOffspring.nn.weightsHO = (bestIndividuals[i].nn.weightsHO + bestIndividuals[i + 1].nn.weightsHO) / 2
         newOffspring.nn.biasHO = (bestIndividuals[i].nn.biasHO + bestIndividuals[i + 1].nn.biasHO) / 2
         newOffspring.nn = mutate(newOffspring)
@@ -108,55 +110,27 @@ def pair(bestIndividuals, n_offsprings, m_parents, method):
 def mutate(offspring):
     offspring.nn.weightsIH += randomWeights(np.zeros((offspring.nn.inputnodes, offspring.nn.hiddennodes[0]), dtype=float))*population.scale
     offspring.nn.biasIHH[0] += randomWeights(np.zeros((1, offspring.nn.hiddennodes[0]), dtype=float))*population.scale
-    for l in range(len(offspring.nn.weightsHH)-1):
-        offspring.nn.weightsHH[l] += randomWeights(np.zeros((offspring.nn.hiddennodes[l], offspring.nn.hiddennodes[l+1]), dtype=float))*population.scale
-        offspring.nn.biasIHH[l+1] += randomWeights(np.zeros((1, offspring.nn.hiddennodes[l+1]), dtype=float))*population.scale
+    offspring.nn.weightsHH[0] += randomWeights(np.zeros((offspring.nn.hiddennodes[0], offspring.nn.hiddennodes[1]), dtype=float))*population.scale
+    offspring.nn.biasIHH[1] += randomWeights(np.zeros((1, offspring.nn.hiddennodes[1]), dtype=float))*population.scale
     offspring.nn.weightsHO += randomWeights(np.zeros((offspring.nn.hiddennodes[1], offspring.nn.outputnodes), dtype=float))*population.scale
     offspring.nn.biasHO += randomWeights(np.zeros((1, offspring.nn.outputnodes), dtype=float))*population.scale
     return offspring.nn
 
-def updateEpoch(population, killbest):
-    population.individuals.sort(key=lambda x: x.fitness, reverse=True)
+def updateEpoch(population):
     population.history.append([k.fitness for k in population.individuals])
-
-    population.historyWeightsIH.append([k.nn.weightsIH for k in population.individuals])
-    population.historyBiasIHH1.append([k.nn.biasIHH[0] for k in population.individuals])
-    population.historyWeightsHH.append([k.nn.weightsHH[0] for k in population.individuals])
-    population.historyBiasIHHn.append([k.nn.biasIHH[1] for k in population.individuals])
-    population.historyWeightsHO.append([k.nn.weightsHO for k in population.individuals])
-    population.historyBiasHO.append([k.nn.biasHO for k in population.individuals])
-
-    np.save("/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
-    np.save("/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
-    np.save("/HH", population.historyWeightsHH, allow_pickle=True, fix_imports=True)
-    np.save("/BIHHn", population.historyBiasIHHn, allow_pickle=True, fix_imports=True)
-    np.save("/HO", population.historyWeightsHO, allow_pickle=True, fix_imports=True)
-    np.save("/BHO", population.historyBiasHO, allow_pickle=True, fix_imports=True)
-
+    population.individuals.sort(key=lambda x: x.fitness, reverse=True)
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
-    population.offsprings = pair(population.bestIndividuals, 0, 0, "else")
+    population.offsprings = pair(population.bestIndividuals, 0, 0, "else", population.benchmarkFunction)
     for o in range(len(population.offsprings)):
-        po = population.offsprings[o]
-        sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)) / 10, po.robot.get_sensors()))
-        population.offsprings[o].fitness = population.offsprings[o].fitnessFunction(\
-            [po.robot.left_velocity, po.robot.right_velocity], sensors, po.robot.environment.cleared_dust, po.robot.collision1, 0.25, 0.5, 0.25)
+        velocity = [population.offsprings[o].robot.left_velocity, population.offsprings[o].robot.right_velocity]
+        collision = population.offsprings[o].robot.collision1
+        population.offsprings[o].fitness = population.offsprings[o].fitnessFunction(velocity, population.offsprings[o].robot.get_sensors(), population.offsprings[o].robot.environment.cleared_dust, collision, 0.25,
+                                            0.5, 0.25)
+    #population.benchmarkFunction(population.offsprings[o].position)
     population.allIndividuals = population.individuals + population.offsprings
     population.allIndividuals.sort(key=lambda x: x.fitness, reverse=True)
     population.allIndividuals = population.allIndividuals[:-population.n_kill]
     population.individuals = population.allIndividuals
-    if killbest:
-        population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
-        population.offsprings = pair(population.bestIndividuals, 0, 0, "else")
-        for o in range(len(population.offsprings)):
-            po = population.offsprings[o]
-            sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)) / 10, po.robot.get_sensors()))
-            population.offsprings[o].fitness = population.offsprings[o].fitnessFunction( \
-                [po.robot.left_velocity, po.robot.right_velocity], sensors, po.robot.environment.cleared_dust,
-                po.robot.collision1, 0.25, 0.5, 0.25)
-        population.individuals = population.individuals[population.n_kill:]
-        population.allIndividuals = population.individuals + population.offsprings
-        population.individuals = population.allIndividuals
-
     #population.scale -= population.decreaseFactorMutation
 
 def rastrigin(genotype):
@@ -169,7 +143,7 @@ def rosenbrock(genotype):
   return np.square(1 - genotype[0]) + 100 * np.square((genotype[1] - genotype[0] * genotype[0]))
 
 benchmarkFunction = rastrigin
-population = Population(30, 18, 1, 3, 9, n_epochs, 0.1, 0.00001)
+population = Population(30, 30, 1, 3, 15, n_epochs, 1.5, 0.00001, benchmarkFunction)
 
 # Simulator
 # from OneFileSolution import *
@@ -186,14 +160,12 @@ y = 30
 clock = pygame.time.Clock()
 restartEvent = pygame.USEREVENT + 1
 pygame.time.set_timer(restartEvent, n_epoch_max_duration_ms)
-updateEpoch(population, False)
-show_objects = True
-n_original_epoch = n_epochs
+updateEpoch(population)
 
 while not done:
     time_seconds = (pygame.time.get_ticks() / 1000)
     if (pygame.event.get(restartEvent) or condition()):
-        updateEpoch(population, False)
+        updateEpoch(population)
         n_epochs -= 1
         reset()
     if (n_epochs <= 0):
@@ -206,44 +178,49 @@ while not done:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 done = True
-            elif event.key == pygame.K_s:
-                show_objects = not show_objects
 
     # print(block.theta)
     # player1.update(block.x, block.y, block.theta, block.radius, 20)
     # player2.update(block.x, block.y, block.theta, block.radius, 0)
     screen.fill((255, 128, 128))
-    grid.draw_grid()
+    blit_text(f"Epoch:{n_epochs}", 100, 100, BLACK, None, 20)
     for w in walls:
         w.draw()
+
     bestcount = 0
     population.individuals.sort(key=lambda x: x.fitness, reverse=True)
     for individual in population.individuals:
     # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
 
         individual.update_individual()
-        individual.nn.print()
-        bestcount += 1
-        if (bestcount <= 5):
-            individual.robot.move(COLOR_FOR_BEST[bestcount - 1], text = str(bestcount))
-
+        individual.fitness -= 2
+        if (bestcount < 4):
+            individual.robot.move(RED)
+            print("BEST fitness: ", individual.fitness)
         else:
             individual.robot.move()
-        if show_objects:
-            individual.robot.draw()
-            individual.robot.draw_direction()
-            individual.robot.draw_icc()
-        individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
-        individual.robot.draw_sensors(display=False)
-        print(f"fitness: {individual.fitness}. LV: {individual.robot.left_velocity}, RV: {individual.robot.right_velocity}, Po: {individual.position}")
-    blit_text(f"Epoch:{n_epochs}", 100, 100, WHITE, BLACK, 36)
+        bestcount += 1
+        individual.robot.draw()
+        print("fitness: ", individual.fitness)
+        individual.robot.environment.draw_dusts(individual.robot)
+        individual.robot.draw_direction()
+        individual.robot.draw_icc()
+        individual.robot.draw_sensors()
+        # e.draw_dusts(block)
 
-    pygame.display.flip()
+    # pygame.display.flip()
     clock.tick(120)
-    # pygame.display.update()
+    pygame.display.update()
+    #screen.fill((0, 0, 0))
+    #x += 1
+    #pygame.draw.rect(screen, (0, 128, 255), pygame.Rect(x, y, 60, 60))
 
-for i in range(len(population.history)):
-    print("Epoch", (i+1), "Final fitness", population.history[i])
+    #pygame.display.flip()
+    #clock.tick(60)
+
+
+#for i in range(len(population.history())):
+#    print("Epoch", (i+1), "Final fitness", population.history[i])
 
 # Output
 # n_epochs = 50

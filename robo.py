@@ -170,15 +170,17 @@ class Robot:
         p4 = (int(round(self.x + self.radius * cos(self.theta))), \
             int(round(self.y + self.radius * sin(self.theta))))
         p6 = (int(round(self.x + .25 * self.radius * cos(self.theta - PI / 6))), \
-              int(round(self.y + .25 * self.radius * sin(self.theta - PI / 6)))),
+              int(round(self.y + .25 * self.radius * sin(self.theta - PI / 6))))
         p5 = (int(round(self.x + self.radius * cos(self.theta - PI / 6))), \
               int(round(self.y + self.radius * sin(self.theta - PI / 6))))
         p2 = (int(round(self.x + .25 * self.radius * cos(self.theta + PI / 6))), \
               int(round(self.y + .25 * self.radius * sin(self.theta + PI / 6))))
         p3 = (int(round(self.x + self.radius * cos(self.theta + PI / 6))), \
               int(round(self.y + self.radius * sin(self.theta + PI / 6))))
-        pygame.draw.polygon(screen, SILVER, [p1, p2, p3, p4, p5, p6])
-
+        try:
+            pygame.draw.polygon(screen, SILVER, [p1, p2, p3, p4, p5, p6])
+        except:
+            print(([p1, p2, p3, p4, p5, p6]))
     def speedup_left(self):
         self.left_velocity += self.increase_factor
 
@@ -578,7 +580,7 @@ clock = pygame.time.Clock()
 
 # screen = pygame.display.set_mode((300, 300))
 # screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
-screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF )
+screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
 walls = []
 east_border = Wall((width - 5 , 0), (width - 5, height - 5), LIGHTBLUE)
 west_border = Wall((5, 5), (5, height - 5), LIGHTBLUE)
