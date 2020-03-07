@@ -8,10 +8,11 @@ n_epoch_max_duration_ms = 10000
 from robo import *
 pygame.init()
 font = pygame.font.SysFont("futura", 16)
-COLOR_FOR_BEST = [(255,0,0), (109,2,2), (163,24,24), (238,114,114), (255,185,185)]
+COLOR_FOR_BEST = [(255,0,10), (0,255,128), (0,0,255), (238,114,114), (255,185,185)]
 class Individual:
     def __init__(self, benchmarkFunction):
         self.benchmarkFunction = benchmarkFunction
+        # self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
         self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
         self.robot = Robot(random.randint(100, 1000), random.randint(100, 1000), \
                            0, 0, 20, walls)
@@ -143,6 +144,7 @@ clock = pygame.time.Clock()
 restartEvent = pygame.USEREVENT + 1
 pygame.time.set_timer(restartEvent, n_epoch_max_duration_ms)
 updateEpoch(population)
+show_objects = True
 
 while not done:
     time_seconds = (pygame.time.get_ticks() / 1000)
@@ -160,6 +162,8 @@ while not done:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 done = True
+            elif event.key == pygame.K_s:
+                show_objects = not show_objects
 
     # print(block.theta)
     # player1.update(block.x, block.y, block.theta, block.radius, 20)
@@ -174,18 +178,18 @@ while not done:
     # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
 
         individual.update_individual()
-        if (bestcount < 4):
-            individual.robot.move(COLOR_FOR_BEST[i])
+        bestcount += 1
+        if (bestcount <= 5):
+            individual.robot.move(COLOR_FOR_BEST[bestcount - 1], text = str(bestcount))
         else:
             individual.robot.move()
-        bestcount += 1
-        individual.robot.draw()
-        print("fitness: ", individual.fitness)
-        # individual.robot.environment.draw_dusts(individual.robot)
-        individual.robot.draw_direction()
-        individual.robot.draw_icc()
-        individual.robot.draw_sensors(display = False)
-        # e.draw_dusts(block)
+        if show_objects:
+            individual.robot.draw()
+            individual.robot.draw_direction()
+            individual.robot.draw_icc()
+        individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
+        individual.robot.draw_sensors(display=False)
+        print("fitness: ", {individual.fitness})
     blit_text(f"Epoch:{n_epochs}", 100, 100, WHITE, BLACK, 36)
 
     pygame.display.flip()
