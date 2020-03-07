@@ -94,8 +94,20 @@ class Robot:
             for i, h in enumerate(self.history[2:-2]):
                 pygame.draw.line(screen, self.color, self.history[i], self.history[i+1], 3)
 
-        pygame.draw.circle(screen, self.color, (int(round(self.x)), int(round(self.y))), self.radius)
-        self.history.append([int(round(self.x)), int(round(self.y))])
+        if abs(self.x) > 10 ** 7 or abs(self.y > 10 ** 7):
+            # this is for odd number,
+            pygame.draw.circle(screen, self.color, (500, 500), 1)
+            # self.history.append([500, 500])
+            self.sensors = []
+            angle = 0
+            while (angle <= 359):
+                self.sensors.append(Sensor([500, 500]))
+                angle = angle + 30
+            return
+        else:
+            pygame.draw.circle(screen, self.color, (int(round(self.x)), int(round(self.y))), self.radius)
+            self.history.append([int(round(self.x)), int(round(self.y))])
+
         angle = 0
         self.sensors = []
         if self.text is not None:
@@ -148,7 +160,7 @@ class Robot:
         return
 
     def draw_icc(self):
-        if (self.left_velocity == self.right_velocity):
+        if (abs(self.left_velocity - self.right_velocity) < 1):
             return
         pygame.draw.circle(screen, PURPLE, [int(round(self.icc_centre_x)), int(round(self.icc_centre_y))], 2)
 

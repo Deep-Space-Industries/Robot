@@ -10,10 +10,9 @@ pygame.init()
 font = pygame.font.SysFont("futura", 16)
 COLOR_FOR_BEST = [(255,0,10), (0,255,128), (0,0,255), (238,114,114), (255,185,185)]
 class Individual:
-    def __init__(self, benchmarkFunction):
-        self.benchmarkFunction = benchmarkFunction
+    def __init__(self):
         # self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
-        self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
+        self.nn = NeuralNetwork(14,[3,2],2, tanh, 0.1)
         self.robot = Robot(random.randint(100, 1000), random.randint(100, 1000), \
                            0, 0, 20, walls)
         self.robot.draw()
@@ -30,7 +29,6 @@ class Individual:
         self.robot.update_velocities(self.position[0], self.position[1])
         self.robot.update_icc()
         self.environment = Environment(density = 1)
-        # self.fitness = self.benchmarkFunction(self.position)
         self.fitness = self.environment.cleared_dust
 
     def update_individual(self):
@@ -42,9 +40,11 @@ class Individual:
         velocities = scalerr(velocities, -15, 15, -1, 1)
         input[0] = np.append(input[0], velocities)
         self.position = self.nn.forwardPropagation(input[0])  # velocities
+        # print(self.position)
         self.position = scalerr(self.position[0], -1, 1, -15, 15)[0]
         #print("before", [self.robot.left_velocity, self.robot.right_velocity])
-        self.robot.update_velocities(self.position[0], self.position[1])
+
+        self.robot.update_velocities(round(self.position[0], 4), round(self.position[1], 4))
         self.robot.update_icc()
         #print("after", [self.robot.left_velocity, self.robot.right_velocity])
         velocity = [self.robot.left_velocity, self.robot.right_velocity]
@@ -55,10 +55,11 @@ class Individual:
         averageVelocity = (velocity[0] + velocity[1])/2
         deltaVelocity = abs(velocity[0] - velocity[1])
         maxSensor = max(sensor)
+
         return w1 * ( averageVelocity * (1 - math.sqrt(deltaVelocity) ) * ( 1 - maxSensor )) + w2 * dust - w3 * collision * 5
 
 class Population:
-    def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation, benchmarkFunction):
+    def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation):
         self.n_individuals = n_individuals
         self.n_bestIndividuals = n_bestIndividuals
         self.n_offsprings = n_offsprings
@@ -67,21 +68,20 @@ class Population:
         self.n_epochs = n_epochs
         self.scale = scale
         self.decreaseFactorMutation = decreaseFactorMutation
-        self.benchmarkFunction = benchmarkFunction
 
-        self.individuals = [Individual(self.benchmarkFunction) for i in range(n_individuals)]
+        self.individuals = [Individual() for i in range(n_individuals)]
         self.history = []
         self.bestIndividuals = None
         self.allIndividuals = None
         self.offsprings = None
 
 # Create n new offsprings by m number of individuals
-def pair(bestIndividuals, n_offsprings, m_parents, method, benchmarkFunction):
+def pair(bestIndividuals, n_offsprings, m_parents, method):
     if (method == "random"):
         random.shuffle(bestIndividuals)
     offsprings = []
     for i in range(len(bestIndividuals))[::2]:
-        newOffspring = Individual(benchmarkFunction)
+        newOffspring = Individual()
         # Genes of parents being passed as average value
         newOffspring.nn.weightsIH=(bestIndividuals[i].nn.weightsIH+bestIndividuals[i+1].nn.weightsIH)/2
         newOffspring.nn.biasIHH[0]=(bestIndividuals[i].nn.biasIHH[0]+bestIndividuals[i+1].nn.biasIHH[0])/2
@@ -106,9 +106,12 @@ def updateEpoch(population):
     population.individuals.sort(key=lambda x: x.fitness, reverse=True)
     population.history.append([k.fitness for k in population.individuals])
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
-    population.offsprings = pair(population.bestIndividuals, 0, 0, "else", population.benchmarkFunction)
+    population.offsprings = pair(population.bestIndividuals, 0, 0, "else")
     for o in range(len(population.offsprings)):
-        population.offsprings[o].fitness = population.benchmarkFunction(population.offsprings[o].position)
+        po = population.offsprings[o]
+        sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)) / 10, po.robot.get_sensors()))
+        population.offsprings[o].fitness = population.offsprings[o].fitnessFunction(\
+            [po.robot.left_velocity, po.robot.right_velocity], sensors, po.robot.environment.cleared_dust, po.robot.collision1, 0.25, 0.5, 0.25)
     population.allIndividuals = population.individuals + population.offsprings
     population.allIndividuals.sort(key=lambda x: x.fitness, reverse=True)
     population.allIndividuals = population.allIndividuals[:-population.n_kill]
@@ -126,7 +129,7 @@ def rosenbrock(genotype):
   return np.square(1 - genotype[0]) + 100 * np.square((genotype[1] - genotype[0] * genotype[0]))
 
 benchmarkFunction = rastrigin
-population = Population(30, 18, 1, 3, 9, n_epochs, 0.75, 0.00001, benchmarkFunction)
+population = Population(30, 18, 1, 3, 9, n_epochs, 0.75, 0.00001)
 
 # Simulator
 # from OneFileSolution import *
@@ -189,7 +192,7 @@ while not done:
             individual.robot.draw_icc()
         individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
         individual.robot.draw_sensors(display=False)
-        print("fitness: ", {individual.fitness})
+        print(f"fitness: {individual.fitness}. LV: {individual.robot.left_velocity}, RV: {individual.robot.right_velocity}, Po: {individual.position}")
     blit_text(f"Epoch:{n_epochs}", 100, 100, WHITE, BLACK, 36)
 
     pygame.display.flip()
