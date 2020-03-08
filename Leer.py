@@ -117,8 +117,8 @@ def mutate(offspring):
 
 def updateEpoch(population, killbest):
     population.individuals.sort(key=lambda x: x.fitness, reverse=True)
-    population.history.append([k.fitness for k in population.individuals])
 
+    population.history.append([k.fitness for k in population.individuals])
     population.historyWeightsIH.append([k.nn.weightsIH for k in population.individuals])
     population.historyBiasIHH1.append([k.nn.biasIHH[0] for k in population.individuals])
     population.historyWeightsHH.append([k.nn.weightsHH[0] for k in population.individuals])
@@ -126,6 +126,7 @@ def updateEpoch(population, killbest):
     population.historyWeightsHO.append([k.nn.weightsHO for k in population.individuals])
     population.historyBiasHO.append([k.nn.biasHO for k in population.individuals])
 
+    np.save("/FT", population.history, allow_pickle=True, fix_imports=True)
     np.save("/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
     np.save("/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
     np.save("/HH", population.historyWeightsHH, allow_pickle=True, fix_imports=True)
