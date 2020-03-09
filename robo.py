@@ -66,7 +66,7 @@ class Robot:
         self.right_velocity = right
 
     def get_sensors(self):
-        return [sensor.value for sensor in self.sensors]
+        return [np.round(sensor.value, 3) for sensor in self.sensors]
 
     def reset_position(self):
         count = 0
@@ -89,8 +89,8 @@ class Robot:
                 return True
         return False
 
-    def draw(self):
-        if len(self.history) > 10:
+    def draw(self, display = True):
+        if len(self.history) > 10 and display:
             for i, h in enumerate(self.history[2:-2]):
                 pygame.draw.line(screen, self.color, self.history[i], self.history[i+1], 3)
 
@@ -105,7 +105,8 @@ class Robot:
                 angle = angle + 30
             return
         else:
-            pygame.draw.circle(screen, self.color, (int(round(self.x)), int(round(self.y))), self.radius)
+            if display:
+                pygame.draw.circle(screen, self.color, (int(round(self.x)), int(round(self.y))), self.radius)
             self.history.append([int(round(self.x)), int(round(self.y))])
 
         angle = 0
@@ -159,12 +160,14 @@ class Robot:
         # print([x.value for x in self.sensors])
         return
 
-    def draw_icc(self):
+    def draw_icc(self, display = True):
         if (abs(self.left_velocity - self.right_velocity) < 1):
             return
-        pygame.draw.circle(screen, PURPLE, [int(round(self.icc_centre_x)), int(round(self.icc_centre_y))], 2)
+        if display:
+            pygame.draw.circle(screen, PURPLE, [int(round(self.icc_centre_x)), int(round(self.icc_centre_y))], 2)
+        return
 
-    def draw_direction(self):
+    def draw_direction(self, display = True):
         p1 = (int(round(self.x + .25 * self.radius * cos(self.theta))), \
               int(round(self.y + .25 * self.radius * sin(self.theta))))
         p4 = (int(round(self.x + self.radius * cos(self.theta))), \
@@ -178,7 +181,10 @@ class Robot:
         p3 = (int(round(self.x + self.radius * cos(self.theta + PI / 6))), \
               int(round(self.y + self.radius * sin(self.theta + PI / 6))))
         try:
-            pygame.draw.polygon(screen, SILVER, [p1, p2, p3, p4, p5, p6])
+            if (display):
+                pygame.draw.polygon(screen, SILVER, [p1, p2, p3, p4, p5, p6])
+            else:
+                return
         except:
             print(([p1, p2, p3, p4, p5, p6]))
     def speedup_left(self):
@@ -242,7 +248,7 @@ class Robot:
         elif (rColliding and not sColliding):
             self.x, self.y, self.theta = self.slide(time_step = 1)
             self.color = GREY if color is GREEN else color
-            if self.collision1 <= 100:
+            if self.collision1 <= 15:
                 self.collision1 += 1
             self.update_icc()
             return
@@ -250,7 +256,7 @@ class Robot:
         elif (sColliding and rColliding):
             self.theta += self.omega
             self.color = BLACK if color is GREEN else color
-            if self.collision1 <= 100:
+            if self.collision1 <= 30:
                 self.collision1 += 2
             for wall in self.to_collide:
                 wall.color = GOLD
@@ -579,8 +585,8 @@ height = 1000
 clock = pygame.time.Clock()
 
 # screen = pygame.display.set_mode((300, 300))
+screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE)
 # screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
-screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF | pygame.HWSURFACE | pygame.FULLSCREEN)
 walls = []
 east_border = Wall((width - 5 , 0), (width - 5, height - 5), LIGHTBLUE)
 west_border = Wall((5, 5), (5, height - 5), LIGHTBLUE)

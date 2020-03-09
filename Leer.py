@@ -2,8 +2,8 @@
 import math
 from NeuralNetwork import *
 import pygame
-n_epochs = 1000
-n_epoch_max_duration_ms = 20000
+n_epochs = 400
+n_epoch_max_duration_ms = 15000
 #sensormax = 500
 
 from robo import *
@@ -11,55 +11,67 @@ pygame.init()
 font = pygame.font.SysFont("futura", 16)
 COLOR_FOR_BEST = [(255,0,10), (0,255,128), (0,0,255), (238,114,114), (255,185,185)]
 class Individual:
-    def __init__(self):
+    def __init__(self, id = None):
         # self.nn = NeuralNetwork(14,[4,3],2, tanh, 0.1)
-        self.nn = NeuralNetwork(14,[3,2],2, tanh, 0.1)
+        self.nn = NeuralNetwork(14,[6,4],2, tanh, 0.1)
         self.robot = Robot(random.randint(50, 200), random.randint(50, 200), \
                            0, 0, 20, walls)
         self.robot.draw()
+        self.id = id
         self.robot.draw_sensors()
-        sensors = self.robot.get_sensors()
-        sensors = list(map(lambda x : (np.e ** ((-(2 * x - 200)) / 37)) / 10, sensors))
-        input = [np.array([sensors])]
-        ## input = scalerr(input[0], 0, 200, -3, 3) # Scale values
-        velocities = [self.robot.left_velocity, self.robot.right_velocity]
-        velocities = scalerr(velocities, -15, 15, -1, 1)
-        input[0] = np.append(input[0], velocities)
-        self.position = self.nn.forwardPropagation(input[0])  # velocities
-        self.position = scalerr(self.position[0], -1, 1, -15, 15)[0]
-        self.robot.update_velocities(self.position[0], self.position[1])
-        self.robot.update_icc()
-        self.environment = Environment(density = 1)
-        self.fitness = self.environment.cleared_dust
+        self.input = None
+        self.sensors = None
+        self.update_individual()
 
     def update_individual(self):
         sensors = self.robot.get_sensors()
-        sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)) / 10, sensors))
-        input = [np.array([sensors])]
-        ## input = scalerr(input[0], 0, 200, -3, 3)  # Scale values
+        # sensors = list(map(lambda x: (np.e ** ((-(2 * x - 200)) / 37)) / 10, sensors))
+        self.sensors = sensors
+        isensors = [200 - s for s in sensors]
+        input = scalerr(isensors, 0, 200, -2, 2) # Scale values
+        # input = [np.array([sensors])]
         velocities = [self.robot.left_velocity, self.robot.right_velocity]
-        velocities = scalerr(velocities, -15, 15, -1, 1)
+        velocities = scalerr(velocities, -10, 10, -1, 1)
         input[0] = np.append(input[0], velocities)
+        self.input = input[0]
         self.position = self.nn.forwardPropagation(input[0])  # velocities
         # print(self.position)
-        self.position = scalerr(self.position[0], -1, 1, -15, 15)[0]
-        #print("before", [self.robot.left_velocity, self.robot.right_velocity])
-
-        self.robot.update_velocities(round(self.position[0], 4), round(self.position[1], 4))
+        # self.position = scalerr(self.position[0], -1, 1, -10, 10)[0]
+        self.robot.update_velocities(round(self.position[0][0]*10, 4), round(self.position[0][1] *10, 4))
         self.robot.update_icc()
-        #print("after", [self.robot.left_velocity, self.robot.right_velocity])
         velocity = [self.robot.left_velocity, self.robot.right_velocity]
         collision = self.robot.collision1
-        self.fitness = self.fitnessFunction(velocity, sensors, self.robot.environment.cleared_dust, collision, 0.25, 0.5, 0.25)
+        self.fitness = self.fitnessFunction(velocity, input[0], self.robot.environment.cleared_dust, collision, 0.4, 0.6, 0.25)
 
     def fitnessFunction(self, velocity, sensor, dust, collision, w1, w2, w3):
         vels = scalerr([velocity[0], velocity[1]], -15, 15, 0, 1)[0]
-        averageVelocity = (vels[0] + vels[1]) / 2
-        deltaVelocity = abs(vels[0] - vels[1])
-        maxSensor = max(sensor) / 200
+        averageVelocity = (velocity[0] + velocity[1]) / 2
+        deltaVelocity = abs(velocity[0] - velocity[1])
+        maxSensor = max(sensor)
         minSensor = min(sensor)
+        penalty = 0.2
+        ipt = abs(minSensor - 200) * 2
+        f1 = w1 * averageVelocity * (1 - math.sqrt(deltaVelocity)) * (1 - maxSensor)
+        f2 = w2 * dust
+        f3 = collision * (1-w2)
+        # print(f"speed: {f1}")
+        # print(f"dust: {f2}")
+        fitness = -f3 + f2 / 10
 
-        return w1 * ( averageVelocity * (1 - math.sqrt(deltaVelocity) ) * ( 1 - maxSensor )) + w2 * dust - w3 * collision * 5 - minSensor*50
+        # fitness = w1 * (averageVelocity * (1 - math.sqrt(deltaVelocity)) * (1 - maxSensor)) + \
+        #           w2 * dust
+
+        # fitness = w1 * (averageVelocity * (1 - math.sqrt(deltaVelocity)) * (1 - maxSensor)) + \
+        #           w2 * dust - w3 * collision * 5 - minSensor * penalty - deltaVelocity * ipt
+
+        # print(f"speed: {w1 * ( averageVelocity * (1 - math.sqrt(deltaVelocity) ) * ( 1 - maxSensor )) }")
+        # print(f"dust: {w2 * dust}")
+        # print(f"collision: {w3 * collision * 5}")
+        # print(f"sensor: {minSensor*penalty}")
+        # print(f"ipt: {deltaVelocity*ipt}")
+        # print(f"total: {fitness}")
+
+        return fitness
 
 class Population:
     def __init__(self, n_individuals, n_bestIndividuals, n_offsprings, m_parents, n_kill, n_epochs, scale, decreaseFactorMutation):
@@ -73,6 +85,8 @@ class Population:
         self.decreaseFactorMutation = decreaseFactorMutation
 
         self.individuals = [Individual() for i in range(n_individuals)]
+        idi = random.choice(self.individuals)
+        idi.id = "!@#"
         self.history = []
 
         self.historyWeightsIH = []
@@ -125,14 +139,14 @@ def updateEpoch(population, killbest):
     population.historyBiasIHHn.append([k.nn.biasIHH[1] for k in population.individuals])
     population.historyWeightsHO.append([k.nn.weightsHO for k in population.individuals])
     population.historyBiasHO.append([k.nn.biasHO for k in population.individuals])
-
-    np.save("/FT", population.history, allow_pickle=True, fix_imports=True)
-    np.save("/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
-    np.save("/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
-    np.save("/HH", population.historyWeightsHH, allow_pickle=True, fix_imports=True)
-    np.save("/BIHHn", population.historyBiasIHHn, allow_pickle=True, fix_imports=True)
-    np.save("/HO", population.historyWeightsHO, allow_pickle=True, fix_imports=True)
-    np.save("/BHO", population.historyBiasHO, allow_pickle=True, fix_imports=True)
+    #
+    np.save("n/FT", population.history, allow_pickle=True, fix_imports=True)
+    np.save("n/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
+    np.save("n/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
+    np.save("n/HH", population.historyWeightsHH, allow_pickle=True, fix_imports=True)
+    np.save("n/BIHHn", population.historyBiasIHHn, allow_pickle=True, fix_imports=True)
+    np.save("n/HO", population.historyWeightsHO, allow_pickle=True, fix_imports=True)
+    np.save("n/BHO", population.historyBiasHO, allow_pickle=True, fix_imports=True)
 
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
     population.offsprings = pair(population.bestIndividuals, 0, 0, "else")
@@ -191,58 +205,73 @@ updateEpoch(population, False)
 show_objects = True
 n_original_epoch = n_epochs
 
-while not done:
-    time_seconds = (pygame.time.get_ticks() / 1000)
-    if (pygame.event.get(restartEvent) or condition()):
-        updateEpoch(population, False)
-        n_epochs -= 1
-        reset()
-    if (n_epochs <= 0):
-        done = True
-    print("Epoch:", n_epochs)
+from pprint import pprint
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+if __name__ == "__main__":
+
+    while not done:
+        time_seconds = (pygame.time.get_ticks() / 1000)
+        if (pygame.event.get(restartEvent) or condition()):
+            updateEpoch(population, False)
+            n_epochs -= 1
+            reset()
+        if (n_epochs <= 0):
             done = True
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+        print("Epoch:", n_epochs)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 done = True
-            elif event.key == pygame.K_s:
-                show_objects = not show_objects
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    done = True
+                elif event.key == pygame.K_s:
+                    show_objects = not show_objects
 
-    # print(block.theta)
-    # player1.update(block.x, block.y, block.theta, block.radius, 20)
-    # player2.update(block.x, block.y, block.theta, block.radius, 0)
-    screen.fill((255, 128, 128))
-    grid.draw_grid()
-    for w in walls:
-        w.draw()
-    bestcount = 0
-    population.individuals.sort(key=lambda x: x.fitness, reverse=True)
-    for individual in population.individuals:
-    # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
+        # print(block.theta)
+        # player1.update(block.x, block.y, block.theta, block.radius, 20)
+        # player2.update(block.x, block.y, block.theta, block.radius, 0)
+        screen.fill((255, 128, 128))
+        grid.draw_grid()
+        for w in walls:
+            w.draw()
+        bestcount = 0
+        population.individuals.sort(key=lambda x: x.fitness, reverse=True)
+        for individual in population.individuals:
+        # blit_text(f'L: {block.left_velocity}; R: {block.right_velocity}', 800, 300, SILVER, BLACK)
 
-        individual.update_individual()
-        individual.nn.print()
-        bestcount += 1
-        if (bestcount <= 5):
-            individual.robot.move(COLOR_FOR_BEST[bestcount - 1], text = str(bestcount))
+            individual.update_individual()
+            bestcount += 1
+            if (bestcount <= 5):
+                individual.robot.move(COLOR_FOR_BEST[bestcount - 1], text = str(bestcount))
 
-        else:
-            individual.robot.move()
-        if show_objects:
-            individual.robot.draw()
-            individual.robot.draw_direction()
-            individual.robot.draw_icc()
-        individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
-        individual.robot.draw_sensors(display=False)
-        print(f"fitness: {individual.fitness}. LV: {individual.robot.left_velocity}, RV: {individual.robot.right_velocity}, Po: {individual.position}")
-    blit_text(f"Epoch:{n_epochs}", 100, 100, WHITE, BLACK, 36)
+            else:
+                if individual.id == "!@#":
+                    pprint(f"{bestcount}. fitness: {individual.fitness}. LV: {individual.robot.left_velocity}, RV: {individual.robot.right_velocity}, Po: {individual.position}")
+                    pprint(f"SS: {individual.input} ")
+                    pprint(f"IP: {individual.sensors}")
+                    individual.robot.move(BLACK, text="!@#")
+                else:
+                    individual.robot.move()
 
-    pygame.display.flip()
-    clock.tick(120)
-    # pygame.display.update()
+            if bestcount <= 5:
+                individual.robot.draw(display=True)
+                individual.robot.draw_direction(display=True)
+                # individual.robot.draw_icc(display=True)
+                individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
+                individual.robot.draw_sensors(display=False)
+            elif bestcount > 5:
+                individual.robot.draw(display=show_objects)
+                individual.robot.draw_direction(display=show_objects)
+                # individual.robot.draw_icc(display=show_objects)
+                individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
+                individual.robot.draw_sensors(display=False)
 
+            blit_text(f"Epoch:{n_epochs}", 100, 100, WHITE, BLACK, 36)
+
+        pygame.display.flip()
+        clock.tick(120)
+            # pygame.display.update()
 for i in range(len(population.history)):
     print("Epoch", (i+1), "Final fitness", population.history[i])
 
