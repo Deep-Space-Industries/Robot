@@ -3,17 +3,14 @@ import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
 from NeuralNetwork import *
-from Leer import *
-from robo import *
+from Simulator import *
+from Robot import *
 
-fitness = np.load("n/FT.npy")
-historyWeightsIH = np.load("n/IH.npy") # input nodes to hidden one
-historyBiasIHH1 = np.load("n/BIHH.npy") # biased to hidden one
-# historyWeightsHH = np.load("n/HH.npy") # hidden one to hidden two
-# historyBiasIHHn = np.load("n/BIHn.npy") # biased to hidden two
-historyWeightsHO = np.load("n/HO.npy") # hidden two to output
-historyBiasHO = np.load("n/BHO.npy") # bias to output
-# historyWeights = [historyWeightsIH, historyBiasHO, historyBiasIHH1, historyBiasIHHn, historyWeightsHH, historyWeightsHO]
+fitness = np.load("NN/FT.npy")
+historyWeightsIH = np.load("NN/IH.npy") # input nodes to hidden one
+historyBiasIHH1 = np.load("NN/BIHH.npy") # biased to hidden one
+historyWeightsHO = np.load("NN/HO.npy") # hidden two to output
+historyBiasHO = np.load("NN/BHO.npy") # bias to output
 
 # Save fitness and diversity of individuals
 maxFitness = []
@@ -24,16 +21,12 @@ n_epochs = 500
 
 IH = historyWeightsIH[-1][0]
 IHH1 = historyBiasIHH1[-1][0] # biased to hidden one
-# HH = historyWeightsHH[-1][0] # hidden one to hidden two
-# BiasIHHn = historyBiasIHHn[-1][0] # biased to hidden two
 HO = historyWeightsHO[-1][0] # hidden two to output
 BiasHO = historyBiasHO[-1][0] # bias to output
 
-nn = NeuralNetwork(14, [6], 2, tanh, 0.1)
+nn = NeuralNetwork(16, [4], 2, tanh)
 nn.weightsIH = IH
 nn.biasIHH[0] = IHH1
-# nn.weightsHH[0] = HH
-# nn.biasIHH[1] = BiasIHHn
 nn.weightsHO = HO
 nn.biasHO = BiasHO
 
@@ -103,8 +96,8 @@ def matrix_distance(matrix1, matrix2):
     return np.sum(np.abs(matrix1 - matrix2))
 
 if _name_ == "_main_":
-    # draw_fitness(fitness, display=True)
-    # draw_diversity(display=True)
+    draw_fitness(fitness, display=True)
+    draw_diversity(display=True)
     while not done:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
