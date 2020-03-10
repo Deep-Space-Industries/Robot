@@ -84,7 +84,7 @@ class Individual:
         print("errorRate", errorRate)
 
         fitness = velocityScore + dustScore + rotationScore + distanceScore + explorationScore - errorRate
-        print("fitness", fitness)
+        print("fitness", fitness, "\n")
 
         return fitness
 
@@ -162,11 +162,11 @@ def updateEpoch(population):
     population.historyBiasHO.append([k.nn.biasHO for k in population.individuals])
 
     # Saving real-time ANN weights to local file
-    # np.save("/FT", population.history, allow_pickle=True, fix_imports=True)
-    # np.save("/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
-    # np.save("/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
-    # np.save("/HO", population.historyWeightsHO, allow_pickle=True, fix_imports=True)
-    # np.save("/BHO", population.historyBiasHO, allow_pickle=True, fix_imports=True)
+    np.save("NN/FT", population.history, allow_pickle=True, fix_imports=True)
+    np.save("NN/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
+    np.save("NN/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
+    np.save("NN/HO", population.historyWeightsHO, allow_pickle=True, fix_imports=True)
+    np.save("NN/BHO", population.historyBiasHO, allow_pickle=True, fix_imports=True)
 
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
     population.offsprings = pair(population.bestIndividuals, 0, 0, "Else")
@@ -202,6 +202,8 @@ show_best_ones = True
 show_best = True
 show_trac = True
 n_original_epoch = n_epochs
+print("Epoch", n_original_epoch - n_epochs + 1)
+
 # Pygame start running
 while not done:
     time_seconds = (pygame.time.get_ticks() / 1000)
@@ -209,6 +211,7 @@ while not done:
     if (pygame.event.get(restartEvent)):
         updateEpoch(population)
         n_epochs -= 1
+        print("Epoch", n_original_epoch-n_epochs+1)
     if (n_epochs <= 0):
         done = True
 

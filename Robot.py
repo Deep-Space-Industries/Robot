@@ -586,16 +586,16 @@ south_border = Wall((5, height - 5), (width - 5, height - 5), LIGHTBLUE)
 north_border = Wall((5, 5), (width - 5, 5), LIGHTBLUE)
 #
 # Double rectangle
-# walls.append(Wall((250, 250), (750, 250), LIGHTBLUE))
-# walls.append(Wall((750, 250), (750, 750), LIGHTBLUE))
-# walls.append(Wall((750, 750), (250, 750), LIGHTBLUE))
-# walls.append(Wall((250, 750), (250, 250), LIGHTBLUE))
+walls.append(Wall((250, 250), (750, 250), LIGHTBLUE))
+walls.append(Wall((750, 250), (750, 750), LIGHTBLUE))
+walls.append(Wall((750, 750), (250, 750), LIGHTBLUE))
+walls.append(Wall((250, 750), (250, 250), LIGHTBLUE))
 
 # Trapezoid
-walls.append(Wall((10, 10), (990, 250), LIGHTBLUE))
-walls.append(Wall((990, 250), (990, 750), LIGHTBLUE))
-walls.append(Wall((990, 750), (10, 990), LIGHTBLUE))
-walls.append(Wall((10, 990), (10, 10), LIGHTBLUE))
+#walls.append(Wall((10, 10), (990, 250), LIGHTBLUE))
+#walls.append(Wall((990, 250), (990, 750), LIGHTBLUE))
+#walls.append(Wall((990, 750), (10, 990), LIGHTBLUE))
+#walls.append(Wall((10, 990), (10, 10), LIGHTBLUE))
 
 # Random
 # walls.append(Wall((100, 200), (400, 300), LIGHTBLUE))
