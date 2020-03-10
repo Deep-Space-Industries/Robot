@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from NeuralNetwork import *
 from Leer import *
-from robo import *
+from Robot import *
 fitness = np.load("n/FT.npy")
 historyWeightsIH = np.load("n/IH.npy") # input nodes to hidden one
 historyBiasIHH1 = np.load("n/BIHH.npy") # biased to hidden one

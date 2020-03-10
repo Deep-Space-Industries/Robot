@@ -6,7 +6,7 @@ import pygame
 n_epochs = 2000
 n_epoch_max_duration_ms = 10000
 
-from robo import *
+from Robot import *
 pygame.init()
 font = pygame.font.SysFont("futura", 16)
 

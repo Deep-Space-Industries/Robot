@@ -17,7 +17,7 @@ def tanh(x):
     return (np.exp(x)-np.exp(-x))/(np.exp(x)+np.exp(-x))
 
 # Scale a set of values in a specific range of ranges
-def scalerr(input, inputLower, inputUpper, outputLower, outputUpper):
+def valueScaler(input, inputLower, inputUpper, outputLower, outputUpper):
     output = []
     for i in input:
         output.append((outputLower + ((outputUpper - outputLower) / (inputUpper - inputLower)) * (i - inputLower)))
@@ -29,6 +29,7 @@ class NeuralNetwork:
         self.n_hiddenLayers = len(hiddennodes)
         self.hiddennodes = hiddennodes
         self.outputnodes = outputnodes
+        self.hiddenOutputs = []
 
         self.weightsIH = randomWeights(np.zeros((self.inputnodes, self.hiddennodes[0]), dtype=float))
         self.weightsHH = []
@@ -47,6 +48,8 @@ class NeuralNetwork:
         self.learningRate = learningRate
 
     def forwardPropagation(self, x):
+        hiddenOutputs = []
+
         # Result: 1st Hidden Layer
         a1 = np.dot(self.weightsIH.T, x)
         a1 = np.add(a1, self.biasIHH[0])
@@ -62,6 +65,7 @@ class NeuralNetwork:
             # Activation function: n Hidden Layer
             for num in range(self.hiddennodes[l+1]):
                 a1[0][num] = self.activationFunction(a1[0][num])
+        self.hiddenOutputs = a1[0]
 
         # Result: Output Layer
         a1 = np.dot(self.weightsHO.T, a1[0])
@@ -87,16 +91,3 @@ class NeuralNetwork:
         print(self.weightsHO)
         print((len(self.weightsHH)+1),". Bias Hidden -> Output")
         print(self.biasHO)
-
-#nn = NeuralNetwork(12,[4,4],2,tanh,0.1)
-#input = np.array([[200,180,7,0,10,175,50,190,7,6,13,50]])
-#input = scalerr(input[0], 0, 200, -3, 3) # Scale values
-#output = nn.forwardPropagation(input[0])
-#nn.print()
-
-#print("Input")
-#print(input)
-#print("Output")
-#print(output)
-#print("Scaled Output")
-#print(scalerr(output[0], -1, 1, -15, 15))
