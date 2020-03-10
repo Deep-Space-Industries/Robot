@@ -13,7 +13,7 @@ COLOR_FOR_BEST = [(255, 0, 10), (0, 255, 128), (0, 0, 255), (238, 114, 114),
 # Define individual class and its variables
 class Individual:
     def __init__(self):
-        # Parameters of 13 inputs, 4 hidden nodes, 2 output nodes and tanh activation funcion
+        # Parameters of 16 inputs, 4 hidden nodes, 2 output nodes and tanh activation funcion
         self.nn = NeuralNetwork(16, [4], 2, tanh)
         # Each individual is assigned a simulated robot
         self.robot = Robot(random.randint(100, 1000), random.randint(100, 1000), \
