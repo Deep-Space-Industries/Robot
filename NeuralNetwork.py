@@ -24,7 +24,7 @@ def valueScaler(input, inputLower, inputUpper, outputLower, outputUpper):
     return [output]
 
 class NeuralNetwork:
-    def __init__(self, inputnodes, hiddennodes, outputnodes, activationFunction, learningRate):
+    def __init__(self, inputnodes, hiddennodes, outputnodes, activationFunction):
         self.inputnodes = inputnodes
         self.n_hiddenLayers = len(hiddennodes)
         self.hiddennodes = hiddennodes
@@ -45,7 +45,6 @@ class NeuralNetwork:
         self.biasHO = randomWeights(np.zeros((1, self.outputnodes), dtype=float))
 
         self.activationFunction = activationFunction
-        self.learningRate = learningRate
 
     def forwardPropagation(self, x):
         hiddenOutputs = []
