@@ -162,11 +162,11 @@ def updateEpoch(population):
     population.historyBiasHO.append([k.nn.biasHO for k in population.individuals])
 
     # Saving real-time ANN weights to local file
-    np.save("/FT", population.history, allow_pickle=True, fix_imports=True)
-    np.save("/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
-    np.save("/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
-    np.save("/HO", population.historyWeightsHO, allow_pickle=True, fix_imports=True)
-    np.save("/BHO", population.historyBiasHO, allow_pickle=True, fix_imports=True)
+    # np.save("/FT", population.history, allow_pickle=True, fix_imports=True)
+    # np.save("/IH", population.historyWeightsIH, allow_pickle=True, fix_imports=True)
+    # np.save("/BIHH", population.historyBiasIHH1, allow_pickle=True, fix_imports=True)
+    # np.save("/HO", population.historyWeightsHO, allow_pickle=True, fix_imports=True)
+    # np.save("/BHO", population.historyBiasHO, allow_pickle=True, fix_imports=True)
 
     population.bestIndividuals = population.individuals[:population.n_bestIndividuals]
     population.offsprings = pair(population.bestIndividuals, 0, 0, "Else")
@@ -200,8 +200,8 @@ show_objects = True
 show_every_one = True
 show_best_ones = True
 show_best = True
+show_trac = True
 n_original_epoch = n_epochs
-
 # Pygame start running
 while not done:
     time_seconds = (pygame.time.get_ticks() / 1000)
@@ -223,6 +223,8 @@ while not done:
                 show_best_ones = not show_best_ones
             elif event.key == pygame.K_v:
                 show_best_ones = not show_best_ones
+            elif event.key == pygame.K_h:
+                show_trac = not show_trac
 
     screen.fill((255, 128, 128))
     grid.draw_grid()
@@ -240,21 +242,21 @@ while not done:
             individual.robot.move()
 
         if bestcount == 1:
-            individual.robot.draw(display=True)
+            individual.robot.draw(display=True, display_history=show_trac)
             individual.robot.draw_direction(display=True)
             # individual.robot.draw_icc(display=True)
             individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
             individual.robot.draw_sensors(display=False)
         elif 1 < bestcount <= 3:
             to_show = bool(show_best_ones or show_every_one)
-            individual.robot.draw(display=to_show)
+            individual.robot.draw(display=to_show, display_history=show_trac)
             individual.robot.draw_direction(display=to_show)
             # individual.robot.draw_icc(display=True)
             individual.robot.environment.draw_dusts(individual.robot, disaplay=False)
             individual.robot.draw_sensors(display=False)
         elif bestcount > 5:
             to_show1 = bool(show_every_one and show_best_ones)
-            individual.robot.draw(display=to_show1)
+            individual.robot.draw(display=to_show1, display_history=show_trac)
             individual.robot.draw_direction(display=to_show1)
             # individual.robot.draw_icc(display=show_objects)
             individual.robot.environment.draw_dusts(individual.robot, disaplay=False)

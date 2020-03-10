@@ -84,10 +84,11 @@ class Robot:
                 return True
         return False
 
-    def draw(self, display = True):
+    def draw(self, display = True, display_history = True):
         if len(self.history) > 10 and display:
-            for i, h in enumerate(self.history[2:-2]):
-                pygame.draw.line(screen, self.color, self.history[i], self.history[i+1], 3)
+            if display_history:
+                for i, h in enumerate(self.history[2:-2]):
+                    pygame.draw.line(screen, self.color, self.history[i], self.history[i+1], 3)
 
         if abs(self.x) > 10 ** 7 or abs(self.y > 10 ** 7):
             # this is for odd number,
@@ -585,16 +586,16 @@ south_border = Wall((5, height - 5), (width - 5, height - 5), LIGHTBLUE)
 north_border = Wall((5, 5), (width - 5, 5), LIGHTBLUE)
 #
 # Double rectangle
-walls.append(Wall((250, 250), (750, 250), LIGHTBLUE))
-walls.append(Wall((750, 250), (750, 750), LIGHTBLUE))
-walls.append(Wall((750, 750), (250, 750), LIGHTBLUE))
-walls.append(Wall((250, 750), (250, 250), LIGHTBLUE))
-#
+# walls.append(Wall((250, 250), (750, 250), LIGHTBLUE))
+# walls.append(Wall((750, 250), (750, 750), LIGHTBLUE))
+# walls.append(Wall((750, 750), (250, 750), LIGHTBLUE))
+# walls.append(Wall((250, 750), (250, 250), LIGHTBLUE))
+
 # Trapezoid
-# walls.append(Wall((10, 10), (990, 250), LIGHTBLUE))
-# walls.append(Wall((990, 250), (990, 750), LIGHTBLUE))
-# walls.append(Wall((990, 750), (10, 990), LIGHTBLUE))
-# walls.append(Wall((10, 990), (10, 10), LIGHTBLUE))
+walls.append(Wall((10, 10), (990, 250), LIGHTBLUE))
+walls.append(Wall((990, 250), (990, 750), LIGHTBLUE))
+walls.append(Wall((990, 750), (10, 990), LIGHTBLUE))
+walls.append(Wall((10, 990), (10, 10), LIGHTBLUE))
 
 # Random
 # walls.append(Wall((100, 200), (400, 300), LIGHTBLUE))
